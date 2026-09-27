@@ -553,6 +553,21 @@ input[type=file]{font-size:14px;max-width:100%;}
 .donate-card h3{font-size:17px;}
 .donate-meta,.donate-accepts,.donate-link{font-size:13px;}
 
+/* --- Clothing guide tab --- */
+.guide-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch;}
+.guide-item{min-width:0;padding:22px;background:#fff;border:1px solid #E0E9DD;border-top:4px solid #829779;border-radius:8px;}
+.guide-item-resale{border-top-color:#C48C4C;}
+.guide-item-donate{border-top-color:#B96E5B;}
+.guide-kicker{margin:0 0 12px;color:#68776A;font-size:12px;font-weight:700;}
+.guide-item h2{margin:0 0 10px;font-size:21px;}
+.guide-summary{min-height:48px;color:#526457;font-size:14px;line-height:1.65;}
+.guide-section{margin-top:18px;}
+.guide-section h3{margin:0 0 8px;font-size:14px;}
+.guide-section ul{margin:0;padding-left:19px;color:#526457;font-size:13px;line-height:1.7;}
+.guide-section li+li{margin-top:6px;}
+.guide-reference{margin:20px 0 0;padding-top:13px;border-top:1px solid #E4EBE1;color:#68776A;font-size:12px;line-height:1.65;overflow-wrap:anywhere;}
+.guide-reference strong{color:#3D5941;}
+
 /* --- Responsive: mobile bottom bar --- */
 @media (max-width:760px){
   .app{flex-direction:column;}
@@ -593,6 +608,9 @@ input[type=file]{font-size:14px;max-width:100%;}
   .clothing-detail-info>div{grid-template-columns:minmax(88px,.7fr) minmax(0,1.3fr);gap:8px;padding:10px 0;}
   .match-pair{gap:10px;}
   .match-pair .score{margin-left:0;}
+  .guide-grid{grid-template-columns:1fr;gap:12px;}
+  .guide-item{padding:18px;}
+  .guide-summary{min-height:0;}
   #donate-map{height:300px;}
 }
 
