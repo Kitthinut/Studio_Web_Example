@@ -1,0 +1,108 @@
+// ============================================================
+// DIGITAL PRODUCT PASSPORT (DPP) — demo layer
+// ------------------------------------------------------------
+// The EU's Digital Product Passport for textiles (under the
+// Ecodesign for Sustainable Products Regulation, ESPR) is still
+// being finalised — the delegated act defining mandatory data
+// fields for textiles is expected in the second half of 2027,
+// with phased rollout after that. There is no single public
+// registry yet that a static front-end app can query for real
+// garments.
+//
+// So this file ships a small MOCK registry that behaves the way
+// a real DPP lookup should: scanning a QR code returns a
+// structured record (composition, origin, care, carbon
+// footprint, recycled content, brand). Swap MOCK_DPP_REGISTRY
+// for a real API call once a registry is available to you, or
+// point DPP_RESOLVE at your own backend.
+// ============================================================
+
+const MOCK_DPP_REGISTRY = {
+  "DPP-000123": {
+    name: "เสื้อยืดคอกลม ผ้าฝ้ายออร์แกนิก",
+    brand: "Nordic Basics · ผลิตในโปรตุเกส",
+    composition: [{ material: "ผ้าฝ้ายออร์แกนิก (Organic Cotton)", percent: 95 },
+                  { material: "อีลาสเทน (Elastane)", percent: 5 }],
+    color: "#E4E0D5",
+    colorBucket: "neutral",
+    care: "ซักเครื่องน้ำเย็น ไม่ฟอกขาว ตากผึ่งลม",
+    carbonFootprintKg: 4.8,
+    recycledContent: 20,
+    type: "top"
+  },
+  "DPP-000456": {
+    name: "กางเกงยีนส์ทรงตรง",
+    brand: "Atelier Loop · ผลิตในตุรกี",
+    composition: [{ material: "ผ้าฝ้าย (Cotton)", percent: 78 },
+                  { material: "โพลีเอสเตอร์รีไซเคิล (Recycled Polyester)", percent: 20 },
+                  { material: "อีลาสเทน (Elastane)", percent: 2 }],
+    color: "#3B4A63",
+    colorBucket: "cool",
+    care: "ซักกลับด้าน น้ำเย็น ตากผึ่งลม",
+    carbonFootprintKg: 18.5,
+    recycledContent: 20,
+    type: "bottom"
+  },
+  "DPP-000789": {
+    name: "แจ็กเก็ตกันลม",
+    brand: "Circular Wear · ผลิตในเวียดนาม",
+    composition: [{ material: "โพลีเอสเตอร์รีไซเคิล (Recycled Polyester)", percent: 100 }],
+    color: "#6E7A5E",
+    colorBucket: "warm",
+    care: "ซักเครื่องน้ำเย็น ห้ามอบแห้ง",
+    carbonFootprintKg: 22.0,
+    recycledContent: 100,
+    type: "outer"
+  }
+};
+
+// Try to make sense of whatever a QR code contains:
+// 1) raw JSON matching our schema
+// 2) a URL/string containing one of our mock DPP ids (e.g. a GS1
+//    Digital Link style URL: https://id.example.eu/dpp/DPP-000123)
+// 3) a bare id like "DPP-000123"
+function resolveDPP(scannedText) {
+  if (!scannedText) return null;
+
+  // 1) direct JSON payload
+  try {
+    const obj = JSON.parse(scannedText);
+    if (obj && obj.name) return obj;
+  } catch (_) { /* not JSON, keep trying */ }
+
+  // 2) / 3) look for a known id anywhere in the string
+  const idMatch = Object.keys(MOCK_DPP_REGISTRY).find(id => scannedText.includes(id));
+  if (idMatch) return MOCK_DPP_REGISTRY[idMatch];
+
+  return null;
+}
+
+// ============================================================
+// CARBON FOOTPRINT — illustrative estimates only
+// ------------------------------------------------------------
+// These are rough, illustrative cradle-to-gate figures for
+// general awareness, NOT a verified life-cycle assessment (LCA).
+// Real per-garment figures vary a lot by supply chain; use a
+// verified DPP/label figure when you have one instead.
+// ============================================================
+const BASE_CARBON_BY_TYPE = {
+  top: 7, bottom: 10, dress: 12, outer: 20, accessory: 2, shoes: 14
+};
+const CARBON_MULTIPLIER_BY_FABRIC = [
+  { match: /wool|ขนสัตว์/i, mult: 1.6 },
+  { match: /silk|ไหม/i, mult: 1.8 },
+  { match: /cotton|ฝ้าย/i, mult: 1.3 },
+  { match: /denim|ยีนส์/i, mult: 1.4 },
+  { match: /nylon|ไนลอน/i, mult: 1.1 },
+  { match: /polyester|โพลีเอสเตอร์/i, mult: 0.8 },
+  { match: /linen|ลินิน/i, mult: 0.9 },
+  { match: /spandex|elastane|สแปนเดกซ์/i, mult: 0.9 },
+  { match: /rayon|viscose|เรยอน/i, mult: 1.0 }
+];
+
+function estimateCarbonKg(type, fabricText) {
+  const base = BASE_CARBON_BY_TYPE[type] ?? 8;
+  const rule = CARBON_MULTIPLIER_BY_FABRIC.find(r => r.match.test(fabricText || ""));
+  const mult = rule ? rule.mult : 1.0;
+  return Math.round(base * mult * 10) / 10;
+}

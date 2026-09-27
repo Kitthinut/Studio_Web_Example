@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ตู้เสื้อผ้า — Wardrobe</title>
+<meta name="theme-color" content="#E8F2E8">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Nav rail -->
+  <nav class="rail">
+    <div class="rail-brand">
+      <span class="brand-mark">摺</span>
+      <span class="brand-word">ตู้เสื้อผ้า</span>
+    </div>
+    <button class="rail-tab is-active" data-tab="closet">
+      <span class="tab-icon">👕</span><span>ตู้เสื้อผ้า</span>
+    </button>
+    <button class="rail-tab" data-tab="match">
+      <span class="tab-icon">✨</span><span>จับคู่ชุด</span>
+    </button>
+    <button class="rail-tab" data-tab="donate">
+      <span class="tab-icon">📍</span><span>จุดบริจาค</span>
+    </button>
+  </nav>
+
+  <!-- Main -->
+  <main class="stage">
+
+    <!-- CLOSET TAB -->
+    <section class="panel is-active" id="panel-closet">
+      <header class="panel-head">
+        <h1>ตู้เสื้อผ้าของฉัน</h1>
+        <p class="sub">บันทึกชนิดผ้าจากป้าย — พิมพ์เองหรือสแกนป้ายด้วยกล้อง</p>
+      </header>
+
+      <div class="closet-layout">
+        <form id="item-form" class="swatch-card form-card">
+          <h2 class="card-title">เพิ่มชิ้นใหม่</h2>
+
+          <label class="field">
+            <span>ชื่อชิ้น</span>
+            <input type="text" id="f-name" placeholder="เช่น เสื้อยืดลายทาง" required>
+          </label>
+
+          <label class="field">
+            <span>แบรนด์ / แหล่งผลิต (ถ้ามี)</span>
+            <input type="text" id="f-brand" placeholder="เช่น Muji · ผลิตในไทย">
+          </label>
+
+          <label class="field">
+            <span>ประเภท</span>
+            <select id="f-type">
+              <option value="top">เสื้อ</option>
+              <option value="bottom">กางเกง/กระโปรง</option>
+              <option value="dress">ชุดเดรส</option>
+              <option value="outer">เสื้อคลุม</option>
+              <option value="accessory">เครื่องประดับ/ผ้าพันคอ</option>
+              <option value="shoes">รองเท้า</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>รูปภาพ (ถ้ามี)</span>
+            <input type="file" id="f-image" accept="image/*">
+            <p id="color-detect-status" class="hint"></p>
+          </label>
+
+          <label class="field">
+            <span>สีหลัก</span>
+            <div class="color-row">
+              <input type="color" id="f-color" value="#8a7f6a">
+              <select id="f-colorbucket">
+                <option value="neutral">กลาง (ขาว/ดำ/เทา/เบจ)</option>
+                <option value="warm">โทนอุ่น (แดง/ส้ม/เหลือง/น้ำตาล)</option>
+                <option value="cool">โทนเย็น (น้ำเงิน/เขียว/ม่วง)</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="field">
+            <span>ชนิดผ้า (จากป้าย)</span>
+            <div class="fabric-row">
+              <input type="text" id="f-fabric" placeholder="เช่น ผ้าฝ้าย 100%" list="fabric-list">
+              <button type="button" id="scan-btn" class="btn-ghost">สแกนป้าย</button>
+            </div>
+            <datalist id="fabric-list">
+              <option value="ผ้าฝ้าย (Cotton)">
+              <option value="โพลีเอสเตอร์ (Polyester)">
+              <option value="ผ้าไหม (Silk)">
+              <option value="ขนสัตว์ (Wool)">
+              <option value="ลินิน (Linen)">
+              <option value="เดนิม/ยีนส์ (Denim)">
+              <option value="สแปนเดกซ์ (Spandex/Elastane)">
+              <option value="ไนลอน (Nylon)">
+              <option value="เรยอน (Rayon/Viscose)">
+            </datalist>
+            <input type="file" id="scan-input" accept="image/*" capture="environment" hidden>
+            <p id="scan-status" class="hint"></p>
+          </label>
+
+          <label class="field">
+            <span>Digital Product Passport (DPP)</span>
+            <div class="fabric-row">
+              <button type="button" id="dpp-scan-btn" class="btn-ghost">สแกน QR ของ DPP</button>
+              <select id="dpp-demo-select">
+                <option value="">— หรือลองตัวอย่าง DPP —</option>
+              </select>
+            </div>
+            <input type="file" id="dpp-scan-input" accept="image/*" capture="environment" hidden>
+            <p id="dpp-status" class="hint"></p>
+            <p class="hint hint-note">DPP ของสหภาพยุโรปสำหรับสิ่งทอยังอยู่ระหว่างบังคับใช้ (คาดปี 2027 เป็นต้นไป) แอปนี้อ่าน QR แบบสาธิต — ต่อกับฐานข้อมูลจริงได้ภายหลัง</p>
+          </label>
+
+          <div class="field-pair">
+            <label class="field">
+              <span>คาร์บอนฟุตพรินท์ (กก. CO2e)</span>
+              <input type="text" id="f-carbon" placeholder="เว้นว่าง = ประมาณให้อัตโนมัติ" inputmode="decimal">
+            </label>
+            <label class="field">
+              <span>เนื้อผ้ารีไซเคิล (%)</span>
+              <input type="text" id="f-recycled" placeholder="0" inputmode="numeric">
+            </label>
+          </div>
+
+          <label class="field">
+            <span>ฤดู/โอกาส</span>
+            <div class="chip-group" id="f-season">
+              <button type="button" class="chip" data-val="hot">ร้อน</button>
+              <button type="button" class="chip" data-val="rainy">ฝน</button>
+              <button type="button" class="chip" data-val="cool">เย็น</button>
+              <button type="button" class="chip" data-val="formal">ทางการ</button>
+            </div>
+          </label>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">บันทึกลงตู้เสื้อผ้า</button>
+            <button type="button" id="cancel-edit" class="btn-ghost" hidden>ยกเลิก</button>
+          </div>
+        </form>
+
+        <div class="closet-grid" id="closet-grid">
+          <!-- items injected here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- MATCH TAB -->
+    <section class="panel" id="panel-match">
+      <header class="panel-head">
+        <h1>จับคู่ชุด</h1>
+        <p class="sub">เลือกชิ้นหลัก แล้วให้แอปช่วยแนะนำชิ้นที่เข้ากัน</p>
+      </header>
+      <div class="match-layout">
+        <div class="field">
+          <span>เลือกชิ้นหลัก</span>
+          <select id="match-select"></select>
+        </div>
+        <div class="match-results" id="match-results"></div>
+      </div>
+    </section>
+
+    <!-- DONATE TAB -->
+    <section class="panel" id="panel-donate">
+      <header class="panel-head">
+        <h1>จุดรับบริจาคเสื้อผ้า</h1>
+        <p class="sub">เลือกชิ้นที่จะทิ้ง แอปจะช่วยหาจุดรับใกล้คุณที่รับผ้าชนิดนั้น</p>
+      </header>
+      <div class="donate-layout donate-layout-wide">
+        <div class="field">
+          <span>เลือกชิ้นที่จะทิ้ง/บริจาค</span>
+          <select id="donate-select"></select>
+        </div>
+        <button id="locate-btn" class="btn-primary">ค้นหาจุดใกล้ฉัน</button>
+        <p id="locate-status" class="hint"></p>
+        <p id="impact-note" class="impact-note"></p>
+        <div id="donate-map"></div>
+        <div class="donate-results" id="donate-results"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Outfit "full build" popup -->
+<div class="modal-backdrop" id="outfit-modal">
+  <div class="modal-box">
+    <button class="modal-close" id="outfit-modal-close" aria-label="ปิด">✕</button>
+    <h2 id="outfit-modal-title">ลุคที่แนะนำ</h2>
+    <div class="outfit-board" id="outfit-board"></div>
+    <div class="palette-block">
+      <span class="palette-label">ชุดสีของลุคนี้</span>
+      <div class="palette-strip" id="outfit-palette"></div>
+    </div>
+    <div class="outfit-impact" id="outfit-impact"></div>
+  </div>
+</div>
+
+<!-- Tesseract.js for on-device tag OCR (no server / API key needed) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+<!-- jsQR for decoding DPP QR codes (pure JS, runs on-device, no API key) -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<!-- Leaflet + OpenStreetMap for the donation map (no API key needed) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="js/donation-data.js"></script>
+<script src="js/dpp-data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "ตู้เสื้อผ้า — Wardrobe",
+  "short_name": "ตู้เสื้อผ้า",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F8FAF5",
+  "theme_color": "#E8F2E8",
+  "icons": []
+}
