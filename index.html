@@ -32,13 +32,18 @@
       <span class="tab-icon">📍</span><span>จุดบริจาค</span>
     </button>
     <div class="rail-owner">
-      <label for="active-owner">เจ้าของที่กำลังเพิ่ม</label>
+      <label for="active-owner">โปรไฟล์เจ้าของที่กำลังเพิ่ม</label>
       <select id="active-owner" aria-label="เลือกเจ้าของเสื้อผ้าที่จะเพิ่ม">
         <option value="A">A</option>
         <option value="B">B</option>
         <option value="C">C</option>
         <option value="D">D</option>
       </select>
+      <div class="owner-edit-row">
+        <input type="text" id="owner-name-input" maxlength="32" placeholder="แก้ชื่อโปรไฟล์" aria-label="ชื่อโปรไฟล์">
+        <button type="button" id="save-owner-name" class="btn-ghost">บันทึกชื่อ</button>
+      </div>
+      <p id="owner-profile-status" class="owner-profile-status" aria-live="polite"></p>
     </div>
   </nav>
 
@@ -206,6 +211,7 @@
         <div class="field">
           <span>เลือกชิ้นหลัก</span>
           <select id="match-select"></select>
+          <button type="button" id="match-detail-btn" class="btn-ghost">ดูรายละเอียดชิ้นที่เลือก</button>
         </div>
         <div class="match-results" id="match-results"></div>
       </div>
@@ -228,7 +234,9 @@
         </div>
         <div class="field">
           <span>เลือกเสื้อผ้า</span>
-          <select id="donate-select"></select>
+          <select id="donate-select">
+            <option value="">ไม่ระบุ — ค้นหาตามประเภทจุดปลายทาง</option>
+          </select>
         </div>
         <button id="locate-btn" class="btn-primary">ค้นหาจุดใกล้ฉัน</button>
         <p id="locate-status" class="hint"></p>
@@ -242,6 +250,20 @@
 </div>
 
 <!-- Outfit "full build" popup -->
+<div class="clothing-detail-backdrop" id="clothing-detail-modal" aria-hidden="true">
+  <section class="clothing-detail-box" role="dialog" aria-modal="true" aria-labelledby="clothing-detail-title" tabindex="-1">
+    <button type="button" class="modal-close" id="clothing-detail-close" aria-label="ปิดรายละเอียด">✕</button>
+    <div class="clothing-detail-image-wrap">
+      <img id="clothing-detail-image" alt="" hidden>
+      <div id="clothing-detail-image-empty" class="clothing-detail-image-empty">ไม่มีรูปภาพ</div>
+    </div>
+    <div class="clothing-detail-content">
+      <h2 id="clothing-detail-title"></h2>
+      <dl id="clothing-detail-info" class="clothing-detail-info"></dl>
+    </div>
+  </section>
+</div>
+
 <div class="modal-backdrop" id="outfit-modal">
   <div class="modal-box">
     <button class="modal-close" id="outfit-modal-close" aria-label="ปิด">✕</button>

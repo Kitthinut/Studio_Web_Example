@@ -3,7 +3,21 @@
 // ============================================================
 const STORAGE_KEY = "wardrobe_items_v1";
 const OWNER_STORAGE_KEY = "wardrobe_active_owner_v1";
-const OWNER_NAMES = ["A", "B", "C", "D"];
+const OWNER_PROFILES_STORAGE_KEY = "wardrobe_owner_profiles_v1";
+const OWNER_IDS = ["A", "B", "C", "D"];
+
+function loadOwnerProfiles() {
+  try {
+    const savedProfiles = JSON.parse(localStorage.getItem(OWNER_PROFILES_STORAGE_KEY) || "{}");
+    return Object.fromEntries(OWNER_IDS.map(id => [
+      id,
+      typeof savedProfiles[id] === "string" && savedProfiles[id].trim() ? savedProfiles[id].trim() : id
+    ]));
+  } catch (e) {
+    console.error("Could not read owner profiles:", e);
+    return Object.fromEntries(OWNER_IDS.map(id => [id, id]));
+  }
+}
 
 function loadItems() {
   try {
@@ -26,10 +40,11 @@ function saveItems(items) {
 let items = loadItems();
 let editingItemId = null;
 let currentDetectedPalette = [];
-let activeOwner = OWNER_NAMES[0];
+const ownerProfiles = loadOwnerProfiles();
+let activeOwner = OWNER_IDS[0];
 try {
   const savedOwner = localStorage.getItem(OWNER_STORAGE_KEY);
-  if (OWNER_NAMES.includes(savedOwner)) activeOwner = savedOwner;
+  if (OWNER_IDS.includes(savedOwner)) activeOwner = savedOwner;
 } catch (e) {
   console.error("Could not read active wardrobe owner:", e);
 }
@@ -55,13 +70,46 @@ document.querySelectorAll(".rail-tab").forEach(btn => {
 });
 
 const activeOwnerSelect = document.getElementById("active-owner");
-activeOwnerSelect.value = activeOwner;
+const ownerNameInput = document.getElementById("owner-name-input");
+const ownerProfileStatus = document.getElementById("owner-profile-status");
+
+function renderOwnerProfiles() {
+  activeOwnerSelect.replaceChildren(...OWNER_IDS.map(id => new Option(ownerProfiles[id], id)));
+  activeOwnerSelect.value = activeOwner;
+  ownerNameInput.value = ownerProfiles[activeOwner];
+}
+
+function ownerDisplayName(ownerId) {
+  return ownerProfiles[ownerId] || ownerId || "ไม่ระบุ";
+}
+
+renderOwnerProfiles();
 activeOwnerSelect.addEventListener("change", () => {
   activeOwner = activeOwnerSelect.value;
+  ownerNameInput.value = ownerProfiles[activeOwner];
+  ownerProfileStatus.textContent = "";
   try {
     localStorage.setItem(OWNER_STORAGE_KEY, activeOwner);
   } catch (e) {
     console.error("Could not save active wardrobe owner:", e);
+  }
+});
+
+document.getElementById("save-owner-name").addEventListener("click", () => {
+  const name = ownerNameInput.value.trim();
+  if (!name) {
+    ownerProfileStatus.textContent = "กรุณาระบุชื่อโปรไฟล์";
+    return;
+  }
+  ownerProfiles[activeOwner] = name;
+  try {
+    localStorage.setItem(OWNER_PROFILES_STORAGE_KEY, JSON.stringify(ownerProfiles));
+    renderOwnerProfiles();
+    renderCloset();
+    ownerProfileStatus.textContent = "บันทึกชื่อโปรไฟล์แล้ว";
+  } catch (e) {
+    console.error("Could not save owner profiles:", e);
+    ownerProfileStatus.textContent = "บันทึกชื่อไม่สำเร็จ";
   }
 });
 
@@ -471,7 +519,7 @@ function renderCloset() {
   const brandFilter = document.getElementById("filter-brand");
   const ownerFilter = document.getElementById("filter-owner");
   updateFilterOptions(brandFilter, items.map(item => item.brand), "ทุกแบรนด์");
-  updateFilterOptions(ownerFilter, items.map(item => item.owner || "ไม่ระบุ"), "ทุกคน");
+  updateOwnerFilterOptions(ownerFilter, items.map(item => item.owner));
   grid.innerHTML = "";
   if (!items.length) {
     grid.innerHTML = `<div class="empty-note">ตู้เสื้อผ้ายังว่างอยู่ — เพิ่มชิ้นแรกของคุณทางซ้าย</div>`;
@@ -482,7 +530,7 @@ function renderCloset() {
   const visibleItems = items.filter(item =>
     (!colorFilter || item.colorBucket === colorFilter) &&
     (!brandFilter.value || item.brand === brandFilter.value) &&
-    (!ownerFilter.value || (item.owner || "ไม่ระบุ") === ownerFilter.value) &&
+    (!ownerFilter.value || (item.owner || "__unassigned__") === ownerFilter.value) &&
     (!typeFilter || item.type === typeFilter)
   );
   if (!visibleItems.length) {
@@ -498,13 +546,13 @@ function renderCloset() {
       .join("");
 
     card.innerHTML = `
-      <div class="item-thumb" style="${item.image ? `background-image:url('${item.image}')` : ""}">
+      <button type="button" class="item-thumb item-detail-trigger" data-id="${escapeHTML(item.id)}" aria-label="ดูรายละเอียด ${escapeHTML(item.name)}" style="${item.image ? `background-image:url('${item.image}')` : ""}">
         ${item.image ? "" : "👕"}
-      </div>
+      </button>
       <div class="item-body">
-        <div class="item-name">${escapeHTML(item.name)}</div>
+        <button type="button" class="item-name item-detail-trigger" data-id="${escapeHTML(item.id)}">${escapeHTML(item.name)}</button>
         ${item.brand ? `<div class="item-meta">${escapeHTML(item.brand)}</div>` : ""}
-        <div class="item-meta">เจ้าของ: ${escapeHTML(item.owner || "ไม่ระบุ")}</div>
+        <div class="item-meta">เจ้าของ: ${escapeHTML(ownerDisplayName(item.owner))}</div>
         <div class="item-meta">${TYPE_LABEL[item.type] || item.type} · ${(item.seasons || []).map(s => SEASON_LABEL[s]).join(", ") || "ทุกฤดู"}</div>
         <div class="item-meta" style="display:flex;align-items:center;margin-top:4px;">พาเลต: ${itemPaletteHtml}</div>
         <span class="fabric-tag">${escapeHTML(item.fabric)}</span>
@@ -520,6 +568,9 @@ function renderCloset() {
       </div>`;
     grid.appendChild(card);
   });
+  grid.querySelectorAll(".item-detail-trigger").forEach(button => {
+    button.addEventListener("click", () => openClothingDetails(items.find(item => item.id === button.dataset.id)));
+  });
   grid.querySelectorAll(".item-edit").forEach(btn => {
     btn.addEventListener("click", () => startEditingItem(btn.dataset.id));
   });
@@ -530,6 +581,19 @@ function renderCloset() {
       renderCloset();
     });
   });
+}
+
+function updateOwnerFilterOptions(select, values) {
+  const currentValue = select.value;
+  const owners = [...new Set(values.map(ownerId => ownerId || "__unassigned__"))];
+  owners.sort((a, b) => ownerDisplayName(a === "__unassigned__" ? null : a)
+    .localeCompare(ownerDisplayName(b === "__unassigned__" ? null : b)));
+  select.replaceChildren(new Option("ทุกคน", ""));
+  owners.forEach(ownerId => {
+    const name = ownerId === "__unassigned__" ? "ไม่ระบุ" : ownerDisplayName(ownerId);
+    select.add(new Option(name, ownerId));
+  });
+  select.value = owners.includes(currentValue) ? currentValue : "";
 }
 
 function updateFilterOptions(select, values, allLabel) {
@@ -553,6 +617,61 @@ function escapeHTML(str) {
   d.textContent = str;
   return d.innerHTML;
 }
+
+let lastClothingDetailTrigger = null;
+
+function openClothingDetails(item) {
+  if (!item) return;
+  const modal = document.getElementById("clothing-detail-modal");
+  const image = document.getElementById("clothing-detail-image");
+  const imageEmpty = document.getElementById("clothing-detail-image-empty");
+  const info = document.getElementById("clothing-detail-info");
+  const typeName = TYPE_LABEL[item.type] || item.type || "ไม่ระบุ";
+  const palette = itemPaletteColors(item);
+  const composition = Array.isArray(item.composition) && item.composition.length
+    ? item.composition.map(part => `${escapeHTML(part.material)} ${escapeHTML(part.percent ?? "?")}%`).join(" + ")
+    : escapeHTML(item.fabric || "ไม่ระบุ");
+  const seasons = (item.seasons || []).map(season => SEASON_LABEL[season] || season).join(", ") || "ทุกฤดู";
+  const carbon = Number(item.carbonFootprintKg);
+
+  document.getElementById("clothing-detail-title").textContent = item.name || "เสื้อผ้า";
+  image.alt = item.name || "รูปเสื้อผ้า";
+  image.hidden = !item.image;
+  imageEmpty.hidden = Boolean(item.image);
+  if (item.image) image.src = item.image;
+  info.innerHTML = `
+    <div><dt>เจ้าของ</dt><dd>${escapeHTML(ownerDisplayName(item.owner))}</dd></div>
+    <div><dt>แบรนด์</dt><dd>${escapeHTML(item.brand || "ไม่ระบุ")}</dd></div>
+    <div><dt>ประเภท</dt><dd>${escapeHTML(typeName)}</dd></div>
+    <div><dt>ชนิดผ้า</dt><dd>${composition}</dd></div>
+    <div><dt>วิธีดูแล</dt><dd>${escapeHTML(item.care || "ไม่ระบุ")}</dd></div>
+    <div><dt>ฤดู/โอกาส</dt><dd>${escapeHTML(seasons)}</dd></div>
+    <div><dt>เนื้อผ้ารีไซเคิล</dt><dd>${Number(item.recycledContent) || 0}%</dd></div>
+    <div><dt>คาร์บอนฟุตพรินท์</dt><dd>${Number.isFinite(carbon) ? `${carbon.toFixed(1)} กก. CO2e${item.carbonIsEstimated ? " (ประมาณ)" : ""}` : "ไม่ระบุ"}</dd></div>
+    <div class="clothing-detail-colors"><dt>พาเลตสี</dt><dd>${palette.map(color => `<span class="detail-color-swatch" style="background:${color}" title="${color}"></span>`).join("")}</dd></div>`;
+
+  lastClothingDetailTrigger = document.activeElement;
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+  modal.querySelector(".clothing-detail-box").focus();
+}
+
+function closeClothingDetails() {
+  const modal = document.getElementById("clothing-detail-modal");
+  modal.classList.remove("is-open");
+  modal.setAttribute("aria-hidden", "true");
+  if (lastClothingDetailTrigger?.isConnected) lastClothingDetailTrigger.focus();
+}
+
+document.getElementById("clothing-detail-close").addEventListener("click", closeClothingDetails);
+document.getElementById("clothing-detail-modal").addEventListener("click", event => {
+  if (event.target.id === "clothing-detail-modal") closeClothingDetails();
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && document.getElementById("clothing-detail-modal").classList.contains("is-open")) {
+    closeClothingDetails();
+  }
+});
 
 // ============================================================
 // PALETTE MATCHING ALGORITHM
@@ -624,13 +743,20 @@ function seasonOverlap(a, b) {
 
 function renderMatchSelect() {
   const sel = document.getElementById("match-select");
+  const detailButton = document.getElementById("match-detail-btn");
   sel.innerHTML = items.map(i => `<option value="${i.id}">${escapeHTML(i.name)}</option>`).join("");
+  detailButton.disabled = !items.length;
   if (!sel.dataset.bound) {
     sel.addEventListener("change", renderMatches);
     sel.dataset.bound = "1";
   }
   renderMatches();
 }
+
+document.getElementById("match-detail-btn").addEventListener("click", () => {
+  const select = document.getElementById("match-select");
+  openClothingDetails(items.find(item => item.id === select.value) || items[0]);
+});
 
 function renderMatches() {
   const sel = document.getElementById("match-select");
@@ -665,9 +791,9 @@ function renderMatches() {
     const row = document.createElement("div");
     row.className = "match-pair";
     row.innerHTML = `
-      <div class="match-thumb" style="${item.image ? `background-image:url('${item.image}')` : `background:${item.color}`}"></div>
+      <button type="button" class="match-thumb item-detail-trigger" data-id="${escapeHTML(item.id)}" aria-label="ดูรายละเอียด ${escapeHTML(item.name)}" style="${item.image ? `background-image:url('${item.image}')` : `background:${item.color}`}"></button>
       <div>
-        <div class="item-name">${escapeHTML(item.name)}</div>
+        <button type="button" class="item-name item-detail-trigger" data-id="${escapeHTML(item.id)}">${escapeHTML(item.name)}</button>
         <div class="item-meta">${TYPE_LABEL[item.type]} · ${escapeHTML(item.fabric)}</div>
         <div class="item-meta">โทนพาเลต: <strong>${escapeHTML(matchedPalette.name)}</strong></div>
         <div class="match-palette" aria-label="สีในพาเลตชุดนี้">${matchedPalette.colors.map(color =>
@@ -676,6 +802,10 @@ function renderMatches() {
       <span class="score">${score}% เข้ากัน</span>
       <button class="btn-ghost btn-look" data-id="${item.id}">ดูลุคเต็ม</button>`;
     results.appendChild(row);
+  });
+
+  results.querySelectorAll(".item-detail-trigger").forEach(button => {
+    button.addEventListener("click", () => openClothingDetails(items.find(item => item.id === button.dataset.id)));
   });
 
   results.querySelectorAll(".btn-look").forEach(btn => {
@@ -725,10 +855,16 @@ function openOutfitModal(baseItem, chosenMatch) {
 
   board.innerHTML = outfit.map(i => `
     <div class="outfit-piece outfit-piece--${i.type}">
-      <div class="outfit-thumb" style="${i.image ? `background-image:url('${i.image}')` : `background:${i.color}`}"></div>
-      <div class="outfit-piece-name">${escapeHTML(i.name)}</div>
+      <button type="button" class="outfit-detail-trigger" data-id="${escapeHTML(i.id)}" aria-label="ดูรายละเอียด ${escapeHTML(i.name)}">
+        <div class="outfit-thumb" style="${i.image ? `background-image:url('${i.image}')` : `background:${i.color}`}"></div>
+        <div class="outfit-piece-name">${escapeHTML(i.name)}</div>
+      </button>
       <div class="outfit-piece-meta">${TYPE_LABEL[i.type]} · ${escapeHTML(i.fabric)}</div>
     </div>`).join("");
+
+  board.querySelectorAll(".outfit-detail-trigger").forEach(button => {
+    button.addEventListener("click", () => openClothingDetails(outfit.find(item => item.id === button.dataset.id)));
+  });
 
   palette.innerHTML = bestMatch.palette.colors.map(colorHex => `
     <div class="palette-swatch" style="background:${colorHex}" title="Color: ${colorHex}"></div>`).join("");
@@ -760,7 +896,8 @@ destinationTypeSelect.addEventListener("change", () => {
 
 function renderDonateSelect() {
   const sel = document.getElementById("donate-select");
-  sel.innerHTML = items.map(i => `<option value="${i.id}">${escapeHTML(i.name)} — ${escapeHTML(i.fabric)}</option>`).join("");
+  sel.innerHTML = `<option value="">ไม่ระบุ — ค้นหาตามประเภทจุดปลายทาง</option>` +
+    items.map(i => `<option value="${i.id}">${escapeHTML(i.name)} — ${escapeHTML(i.fabric)}</option>`).join("");
   displayDestinationPoints();
 }
 
@@ -789,12 +926,14 @@ document.getElementById("locate-btn").addEventListener("click", () => {
   const status = document.getElementById("locate-status");
   const sel = document.getElementById("donate-select");
   const item = items.find(i => i.id === sel.value);
-  if (!item) { status.textContent = "เพิ่มเสื้อผ้าในตู้ก่อน"; return; }
-
   const impactNote = document.getElementById("impact-note");
-  const carbon = item.carbonFootprintKg || estimateCarbonKg(item.type, item.fabric);
   const selectedCategory = DESTINATION_CATEGORIES.find(category => category.id === destinationTypeSelect.value);
-  impactNote.textContent = `ประเภทปลายทาง: ${selectedCategory?.name || "ไม่ระบุ"} · คาร์บอนฟุตพรินท์ของเสื้อผ้าชิ้นนี้ประมาณ ${carbon.toFixed(1)} กก. CO2e (ค่าประมาณ ไม่ใช่คาร์บอนที่ลดได้)`;
+  if (item) {
+    const carbon = item.carbonFootprintKg || estimateCarbonKg(item.type, item.fabric);
+    impactNote.textContent = `ประเภทปลายทาง: ${selectedCategory?.name || "ไม่ระบุ"} · คาร์บอนฟุตพรินท์ของเสื้อผ้าชิ้นนี้ประมาณ ${carbon.toFixed(1)} กก. CO2e (ค่าประมาณ ไม่ใช่คาร์บอนที่ลดได้)`;
+  } else {
+    impactNote.textContent = `ประเภทปลายทาง: ${selectedCategory?.name || "ไม่ระบุ"} · ไม่ได้ระบุเสื้อผ้า จะแสดงจุดทั้งหมดของประเภทนี้`;
+  }
 
   const categoryPoints = DONATION_POINTS.filter(point => point.category === destinationTypeSelect.value);
   if (!categoryPoints.length) {
@@ -804,11 +943,11 @@ document.getElementById("locate-btn").addEventListener("click", () => {
     return;
   }
 
-  const fabricLower = item.fabric.toLowerCase();
-  const matches = categoryPoints.filter(p =>
+  const fabricLower = item?.fabric.toLowerCase() || "";
+  const matches = item ? categoryPoints.filter(p =>
     p.accepts.some(a => fabricLower.includes(a.toLowerCase()) || a.toLowerCase().includes(fabricLower.split(" ")[0]))
-  );
-  const pool = matches.length ? matches : categoryPoints;
+  ) : [];
+  const pool = item && matches.length ? matches : categoryPoints;
 
   if (!navigator.geolocation) {
     status.textContent = `อุปกรณ์นี้ไม่รองรับการระบุตำแหน่ง แสดง${selectedCategory?.name || "จุดปลายทาง"}แทน`;
@@ -825,9 +964,11 @@ document.getElementById("locate-btn").addEventListener("click", () => {
       const withDist = pool
         .map(p => ({ ...p, distanceKm: haversineKm(latitude, longitude, p.lat, p.lng) }))
         .sort((a, b) => a.distanceKm - b.distanceKm);
-      status.textContent = matches.length
-        ? `พบ ${matches.length} จุด${selectedCategory?.name || ""}ที่รับผ้าประเภทนี้ เรียงตามระยะทาง`
-        : `ไม่พบจุดที่รับผ้าประเภทนี้โดยเฉพาะ แสดง${selectedCategory?.name || "จุดปลายทาง"}ใกล้ที่สุดแทน`;
+      status.textContent = !item
+        ? `พบ ${pool.length} จุด${selectedCategory?.name || "จุดปลายทาง"} เรียงตามระยะทาง`
+        : matches.length
+          ? `พบ ${matches.length} จุด${selectedCategory?.name || ""}ที่รับผ้าประเภทนี้ เรียงตามระยะทาง`
+          : `ไม่พบจุดที่รับผ้าประเภทนี้โดยเฉพาะ แสดง${selectedCategory?.name || "จุดปลายทาง"}ใกล้ที่สุดแทน`;
       renderDonateResults(withDist);
       renderDonateMap(withDist, { lat: latitude, lng: longitude });
     },

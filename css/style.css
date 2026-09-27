@@ -70,7 +70,7 @@ p{margin:0;}
   background:none;
   border:none;
   color:rgba(237,232,222,0.75);
-  font-family:"Work Sans",sans-serif;
+  font-family:"DM Sans","Noto Sans Thai",sans-serif;
   font-size:14px;
   padding:11px 10px;
   border-radius:var(--radius);
@@ -85,6 +85,10 @@ p{margin:0;}
 .tab-icon{font-size:16px;}
 .rail-owner{display:flex;flex-direction:column;gap:7px;margin-top:auto;padding:14px 8px 2px;border-top:1px solid rgba(237,232,222,.18);font-size:12px;}
 .rail-owner select{width:100%;min-width:0;min-height:40px;}
+.owner-edit-row{display:flex;gap:6px;min-width:0;}
+.owner-edit-row input{width:100%;min-width:0;min-height:40px;padding:8px;font-size:13px;}
+.owner-edit-row .btn-ghost{flex:0 0 auto;min-height:40px;padding:0 8px;font-size:12px;}
+.owner-profile-status{min-height:14px;margin:0;color:#456148;font-size:11px;}
 
 /* --- Stage / panels --- */
 .stage{flex:1;padding:32px 40px;max-width:1100px;}
@@ -186,8 +190,10 @@ input[type=file]{font-size:13px;}
   font-size:32px;
   color:#b9b09a;
 }
+.item-thumb.item-detail-trigger{width:100%;border:0;padding:0;cursor:zoom-in;}
 .item-body{padding:10px 12px;}
 .item-name{font-size:13px;font-weight:600;margin-bottom:4px;}
+.item-name.item-detail-trigger{display:block;width:100%;padding:0;border:0;background:none;color:inherit;font-family:inherit;text-align:left;cursor:pointer;}
 .item-meta{font-size:11px;color:var(--ink-soft);}
 .fabric-tag{
   display:inline-block;
@@ -267,10 +273,26 @@ input[type=file]{font-size:13px;}
   white-space:nowrap;
 }
 .match-thumb{
-  width:44px;height:44px;border-radius:4px;background-size:cover;background-position:center;background-color:#e2ddce;flex-shrink:0;
+  width:44px;height:44px;border:0;padding:0;border-radius:4px;background-size:cover;background-position:center;background-color:#e2ddce;flex-shrink:0;cursor:zoom-in;
 }
 .match-palette{display:flex;gap:5px;margin-top:7px;}
 .match-palette-swatch{width:18px;height:18px;flex:0 0 18px;border:1px solid rgba(38,50,61,.2);border-radius:50%;}
+
+.clothing-detail-backdrop{display:none;position:fixed;inset:0;z-index:120;align-items:center;justify-content:center;padding:20px;background:rgba(31,43,34,.55);backdrop-filter:blur(4px);}
+.clothing-detail-backdrop.is-open{display:flex;}
+.clothing-detail-box{position:relative;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);width:min(100%,1000px);max-height:90vh;overflow:auto;border:1px solid #E0E9DD;border-radius:8px;background:#FCFDFB;box-shadow:0 20px 60px rgba(20,35,23,.24);}
+.clothing-detail-image-wrap{display:grid;min-height:420px;place-items:center;background:#F1F6EE;}
+.clothing-detail-image-wrap img{display:block;width:100%;height:100%;max-height:80vh;padding:24px;object-fit:contain;}
+.clothing-detail-image-wrap img[hidden],.clothing-detail-image-empty[hidden]{display:none;}
+.clothing-detail-image-empty{color:#728073;font-size:14px;}
+.clothing-detail-content{padding:34px 30px;}
+.clothing-detail-content h2{padding-right:24px;margin-bottom:24px;font-size:24px;line-height:1.35;}
+.clothing-detail-info{display:grid;gap:0;margin:0;}
+.clothing-detail-info>div{display:grid;grid-template-columns:minmax(105px,.7fr) minmax(0,1.3fr);gap:12px;padding:12px 0;border-bottom:1px solid #E8EEE5;}
+.clothing-detail-info dt{color:#66766A;font-size:13px;font-weight:600;}
+.clothing-detail-info dd{min-width:0;margin:0;color:#26352D;font-size:14px;overflow-wrap:anywhere;}
+.clothing-detail-info .clothing-detail-colors dd{display:flex;flex-wrap:wrap;gap:7px;}
+.detail-color-swatch{width:22px;height:22px;border:1px solid rgba(38,53,45,.2);border-radius:50%;}
 
 /* --- Outfit "full build" modal --- */
 .modal-backdrop{
@@ -503,6 +525,7 @@ input[type=file]{font-size:14px;max-width:100%;}
   background:#fff;
   text-align:center;
 }
+.outfit-detail-trigger{display:flex;flex:1;min-height:0;flex-direction:column;width:100%;border:0;padding:0;background:none;color:inherit;font:inherit;text-align:inherit;cursor:zoom-in;}
 .outfit-piece--top{grid-area:top;}
 .outfit-piece--bottom{grid-area:bottom;}
 .outfit-piece--outer{grid-area:outer;}
@@ -542,9 +565,11 @@ input[type=file]{font-size:14px;max-width:100%;}
     order:2;
     position:sticky;bottom:0;
   }
-  .rail-owner{order:-1;flex:1 0 100%;flex-direction:row;align-items:center;margin:0;padding:0 8px 6px;border:0;}
+  .rail-owner{display:grid;grid-template-columns:auto 64px minmax(0,1fr);gap:7px 8px;order:-1;flex:1 0 100%;margin:0;padding:0 8px 6px;border:0;}
+  .rail-owner>label{grid-column:1;align-self:center;}
   .rail-owner label{flex:0 0 auto;}
-  .rail-owner select{width:auto;flex:1;}
+  .rail-owner select{grid-column:2/4;width:100%;}
+  .owner-edit-row,.owner-profile-status{grid-column:1/-1;}
   .rail-brand{display:none;}
   .rail-tab{flex-direction:column;font-size:12px;gap:4px;padding:7px 10px;}
   .stage{order:1;padding:24px 18px 10px;}
@@ -559,6 +584,13 @@ input[type=file]{font-size:14px;max-width:100%;}
   .outfit-piece-meta{font-size:10px;}
   .modal-backdrop{padding:10px;}
   .modal-box{padding:22px 14px;max-height:90vh;}
+  .clothing-detail-backdrop{padding:10px;}
+  .clothing-detail-box{grid-template-columns:1fr;max-height:92vh;}
+  .clothing-detail-image-wrap{min-height:35vh;max-height:46vh;}
+  .clothing-detail-image-wrap img{max-height:46vh;padding:14px;}
+  .clothing-detail-content{padding:22px 18px;}
+  .clothing-detail-content h2{font-size:20px;margin-bottom:14px;}
+  .clothing-detail-info>div{grid-template-columns:minmax(88px,.7fr) minmax(0,1.3fr);gap:8px;padding:10px 0;}
   .match-pair{gap:10px;}
   .match-pair .score{margin-left:0;}
   #donate-map{height:300px;}
