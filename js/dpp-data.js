@@ -19,11 +19,11 @@
 
 const MOCK_DPP_REGISTRY = {
   "DPP-DEMO-COAT": {
-    name: "เสื้อโค้ตสีน้ำตาล (ตัวอย่าง)",
+    name: "เสื้อโค้ตสีเขียวครีม (ตัวอย่าง)",
     brand: "Wardrobe Demo · ข้อมูลสาธิต",
     composition: [{ material: "ขนสัตว์ (Wool)", percent: 60 },
                   { material: "โพลีเอสเตอร์ (Polyester)", percent: 40 }],
-    color: "#75604F",
+    color: "#d3ffd6",
     colorBucket: "warm",
     care: "ข้อมูลการดูแลจำลอง — ตรวจสอบจากป้ายจริง",
     carbonFootprintKg: 20.0,
