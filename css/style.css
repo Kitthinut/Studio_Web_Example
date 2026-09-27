@@ -567,6 +567,25 @@ input[type=file]{font-size:14px;max-width:100%;}
 .guide-section li+li{margin-top:6px;}
 .guide-reference{margin:20px 0 0;padding-top:13px;border-top:1px solid #E4EBE1;color:#68776A;font-size:12px;line-height:1.65;overflow-wrap:anywhere;}
 .guide-reference strong{color:#3D5941;}
+.guide-impact-hero,.guide-how-helps,.guide-references-block{margin-bottom:24px;padding:22px;border:1px solid #E0E9DD;border-radius:8px;background:#fff;}
+.guide-impact-hero{border-top:4px solid #829779;}
+.guide-impact-hero h2,.guide-how-helps h2{margin:0 0 14px;font-size:21px;}
+.journey-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0;}
+.journey-step{min-width:0;padding:15px;border:1px solid #E0E9DD;border-radius:6px;background:#F8FAF5;}
+.journey-step p{margin:8px 0 0;color:#526457;font-size:13px;line-height:1.6;}
+.stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:16px;border-radius:6px;background:#F8FAF5;}
+.guide-stat{min-width:0;}
+.guide-stat strong{display:block;color:#B5533C;font-size:23px;}
+.guide-stat span{color:#66766A;font-size:13px;line-height:1.5;}
+.guide-how-helps{border-left:5px solid #7C9B72;background:#F0F6ED;}
+.guide-how-helps h2{color:#365844;}
+.guide-how-helps ul{margin:0;padding-left:20px;color:#45584A;font-size:14px;line-height:1.75;}
+.guide-how-helps li+li{margin-top:7px;}
+.guide-references-block{margin:32px 0 0;}
+.guide-references-block h2{margin:0 0 12px;font-size:19px;}
+.guide-references-block ul{margin:0;padding-left:20px;color:#526457;font-size:13px;line-height:1.75;}
+.guide-references-block li+li{margin-top:8px;}
+.guide-references-block a{overflow-wrap:anywhere;color:#9A4D39;}
 
 /* --- Responsive: mobile bottom bar --- */
 @media (max-width:760px){
@@ -611,6 +630,9 @@ input[type=file]{font-size:14px;max-width:100%;}
   .guide-grid{grid-template-columns:1fr;gap:12px;}
   .guide-item{padding:18px;}
   .guide-summary{min-height:0;}
+  .journey-steps{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .stats-grid{grid-template-columns:1fr;}
+  .guide-impact-hero,.guide-how-helps,.guide-references-block{padding:17px;}
   #donate-map{height:300px;}
 }
 
