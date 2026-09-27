@@ -5,32 +5,43 @@
 // of hard-coding. Each "accepts" array should use the same fabric
 // keywords you expect users to type/scan in the closet tab.
 // ------------------------------------------------------------------
+const DESTINATION_CATEGORIES = [
+  { id: "recycling", name: "จุดรับทำเป็นขยะรีไซเคิล" },
+  { id: "resale", name: "พื้นที่ขายต่อมือสอง" },
+  { id: "donation", name: "จุดรับบริจาค" }
+];
+
 const DONATION_POINTS = [
   {
+    category: "donation",
     name: "ตู้รับบริจาคเสื้อผ้า สยามพารากอน",
     address: "ถนนพระรามที่ 1 เขตปทุมวัน กรุงเทพฯ",
     lat: 13.7460, lng: 100.5340,
     accepts: ["ผ้าฝ้าย", "cotton", "โพลีเอสเตอร์", "polyester", "เดนิม", "denim"]
   },
   {
+    category: "donation",
     name: "จุดรับบริจาค มูลนิธิกระจกเงา (สาขาเหม่งจ๋าย)",
     address: "ถนนลาดพร้าว เขตห้วยขวาง กรุงเทพฯ",
     lat: 13.7860, lng: 100.5760,
     accepts: ["ผ้าฝ้าย", "cotton", "ขนสัตว์", "wool", "ลินิน", "linen", "โพลีเอสเตอร์", "polyester"]
   },
   {
+    category: "recycling",
     name: "ถังผ้ารีไซเคิล เซ็นทรัลเวิลด์",
     address: "ถนนราชดำริ เขตปทุมวัน กรุงเทพฯ",
     lat: 13.7466, lng: 100.5393,
     accepts: ["โพลีเอสเตอร์", "polyester", "ไนลอน", "nylon", "สแปนเดกซ์", "spandex", "elastane"]
   },
   {
+    category: "donation",
     name: "จุดรับบริจาค วัดสวนแก้ว (สาขากรุงเทพฯ)",
     address: "เขตบางกอกน้อย กรุงเทพฯ",
     lat: 13.7770, lng: 100.4720,
     accepts: ["ผ้าฝ้าย", "cotton", "ผ้าไหม", "silk", "เรยอน", "rayon", "viscose", "ขนสัตว์", "wool"]
   },
   {
+    category: "recycling",
     name: "ตู้รับบริจาค H&M (สาขาเซ็นทรัล ลาดพร้าว)",
     address: "ถนนพหลโยธิน เขตจตุจักร กรุงเทพฯ",
     lat: 13.8160, lng: 100.5610,

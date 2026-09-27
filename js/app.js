@@ -752,13 +752,27 @@ document.getElementById("outfit-modal").addEventListener("click", (e) => {
 // ============================================================
 // DONATE TAB
 // ============================================================
+const destinationTypeSelect = document.getElementById("destination-type");
+destinationTypeSelect.addEventListener("change", () => {
+  document.getElementById("locate-status").textContent = "";
+  displayDestinationPoints();
+});
+
 function renderDonateSelect() {
   const sel = document.getElementById("donate-select");
   sel.innerHTML = items.map(i => `<option value="${i.id}">${escapeHTML(i.name)} — ${escapeHTML(i.fabric)}</option>`).join("");
-  if (!donateMapInstance) {
-    renderDonateResults(DONATION_POINTS);
-    renderDonateMap(DONATION_POINTS, null);
+  displayDestinationPoints();
+}
+
+function displayDestinationPoints() {
+  const points = DONATION_POINTS.filter(point => point.category === destinationTypeSelect.value);
+  const status = document.getElementById("locate-status");
+  if (!points.length) {
+    const category = DESTINATION_CATEGORIES.find(entry => entry.id === destinationTypeSelect.value);
+    status.textContent = `ยังไม่มีข้อมูล${category?.name || "จุดปลายทางประเภทนี้"} — เพิ่มจุดจริงใน js/donation-data.js`;
   }
+  renderDonateResults(points);
+  renderDonateMap(points, null);
 }
 
 function haversineKm(lat1, lng1, lat2, lng2) {
@@ -779,16 +793,25 @@ document.getElementById("locate-btn").addEventListener("click", () => {
 
   const impactNote = document.getElementById("impact-note");
   const carbon = item.carbonFootprintKg || estimateCarbonKg(item.type, item.fabric);
-  impactNote.innerHTML = `🌍 การส่งต่อ/บริจาค "${escapeHTML(item.name)}" แทนการทิ้ง ช่วยลดความจำเป็นในการผลิตชิ้นใหม่ทดแทน — ประหยัดคาร์บอนได้ประมาณ <strong>${carbon.toFixed(1)} กก. CO2e</strong> และลดผ้าที่ต้องไปฝังกลบ/เผา (ตัวเลขเป็นค่าประมาณเพื่อการรับรู้ทั่วไป ไม่ใช่ค่าที่วัดจริง)`;
+  const selectedCategory = DESTINATION_CATEGORIES.find(category => category.id === destinationTypeSelect.value);
+  impactNote.textContent = `ประเภทปลายทาง: ${selectedCategory?.name || "ไม่ระบุ"} · คาร์บอนฟุตพรินท์ของเสื้อผ้าชิ้นนี้ประมาณ ${carbon.toFixed(1)} กก. CO2e (ค่าประมาณ ไม่ใช่คาร์บอนที่ลดได้)`;
+
+  const categoryPoints = DONATION_POINTS.filter(point => point.category === destinationTypeSelect.value);
+  if (!categoryPoints.length) {
+    status.textContent = `ยังไม่มีข้อมูล${selectedCategory?.name || "จุดปลายทางประเภทนี้"} — เพิ่มจุดจริงใน js/donation-data.js`;
+    renderDonateResults([]);
+    renderDonateMap([], null);
+    return;
+  }
 
   const fabricLower = item.fabric.toLowerCase();
-  const matches = DONATION_POINTS.filter(p =>
+  const matches = categoryPoints.filter(p =>
     p.accepts.some(a => fabricLower.includes(a.toLowerCase()) || a.toLowerCase().includes(fabricLower.split(" ")[0]))
   );
-  const pool = matches.length ? matches : DONATION_POINTS;
+  const pool = matches.length ? matches : categoryPoints;
 
   if (!navigator.geolocation) {
-    status.textContent = "อุปกรณ์นี้ไม่รองรับการระบุตำแหน่ง แสดงจุดรับบริจาคทั้งหมดแทน";
+    status.textContent = `อุปกรณ์นี้ไม่รองรับการระบุตำแหน่ง แสดง${selectedCategory?.name || "จุดปลายทาง"}แทน`;
     const list = pool.map(p => ({ ...p }));
     renderDonateResults(list);
     renderDonateMap(list, null);
@@ -803,13 +826,13 @@ document.getElementById("locate-btn").addEventListener("click", () => {
         .map(p => ({ ...p, distanceKm: haversineKm(latitude, longitude, p.lat, p.lng) }))
         .sort((a, b) => a.distanceKm - b.distanceKm);
       status.textContent = matches.length
-        ? `พบ ${matches.length} จุดที่รับผ้าประเภทนี้ เรียงตามระยะทาง`
-        : `ไม่พบจุดที่รับผ้าประเภทนี้โดยเฉพาะ แสดงจุดที่ใกล้ที่สุดแทน`;
+        ? `พบ ${matches.length} จุด${selectedCategory?.name || ""}ที่รับผ้าประเภทนี้ เรียงตามระยะทาง`
+        : `ไม่พบจุดที่รับผ้าประเภทนี้โดยเฉพาะ แสดง${selectedCategory?.name || "จุดปลายทาง"}ใกล้ที่สุดแทน`;
       renderDonateResults(withDist);
       renderDonateMap(withDist, { lat: latitude, lng: longitude });
     },
     () => {
-      status.textContent = "ไม่สามารถเข้าถึงตำแหน่งได้ แสดงจุดรับบริจาคทั้งหมดแทน";
+      status.textContent = `ไม่สามารถเข้าถึงตำแหน่งได้ แสดง${selectedCategory?.name || "จุดปลายทาง"}แทน`;
       const list = pool.map(p => ({ ...p }));
       renderDonateResults(list);
       renderDonateMap(list, null);
@@ -843,8 +866,10 @@ function renderDonateMap(points, userLoc) {
   }
   points.forEach(p => {
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+    const category = DESTINATION_CATEGORIES.find(entry => entry.id === p.category);
     const marker = L.marker([p.lat, p.lng]).addTo(donateMapInstance).bindPopup(`
       <strong>${escapeHTML(p.name)}</strong><br>
+      ${escapeHTML(category?.name || "จุดปลายทาง")}<br>
       ${escapeHTML(p.address)}${p.distanceKm != null ? `<br>ห่างประมาณ ${p.distanceKm.toFixed(1)} กม.` : ""}<br>
       รับ: ${p.accepts.slice(0, 4).map(escapeHTML).join(", ")}<br>
       <a href="${mapsUrl}" target="_blank" rel="noopener">เปิดใน Google Maps</a>
@@ -861,12 +886,18 @@ function renderDonateMap(points, userLoc) {
 function renderDonateResults(points) {
   const wrap = document.getElementById("donate-results");
   wrap.innerHTML = "";
+  if (!points.length) {
+    wrap.innerHTML = `<div class="empty-note">ยังไม่มีจุดปลายทางประเภทนี้ในข้อมูล</div>`;
+    return;
+  }
   points.forEach(p => {
     const card = document.createElement("div");
     card.className = "donate-card";
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+    const category = DESTINATION_CATEGORIES.find(entry => entry.id === p.category);
     card.innerHTML = `
       <h3>${escapeHTML(p.name)}</h3>
+      <div class="donate-category">${escapeHTML(category?.name || "จุดปลายทาง")}</div>
       <div class="donate-meta">${escapeHTML(p.address)}${p.distanceKm != null ? ` · ห่างประมาณ ${p.distanceKm.toFixed(1)} กม.` : ""}</div>
       <div class="donate-accepts">รับ: ${p.accepts.slice(0, 4).map(escapeHTML).join(", ")}${p.accepts.length > 4 ? " …" : ""}</div>
       <a class="donate-link" href="${mapsUrl}" target="_blank" rel="noopener">เปิดใน Google Maps</a>`;

@@ -19,7 +19,7 @@
   <!-- Nav rail -->
   <nav class="rail">
     <div class="rail-brand">
-      <span class="brand-mark">摺</span>
+      <img class="brand-mark" src="assets/clothes/Re-Wear.png" alt="Re-Wear">
       <span class="brand-word">ตู้เสื้อผ้า</span>
     </div>
     <button class="rail-tab is-active" data-tab="closet">
@@ -214,12 +214,20 @@
     <!-- DONATE TAB -->
     <section class="panel" id="panel-donate">
       <header class="panel-head">
-        <h1>จุดรับบริจาคเสื้อผ้า</h1>
-        <p class="sub">เลือกชิ้นที่จะทิ้ง แอปจะช่วยหาจุดรับใกล้คุณที่รับผ้าชนิดนั้น</p>
+        <h1>ส่งต่อเสื้อผ้า</h1>
+        <p class="sub">เลือกประเภทจุดปลายทางและเสื้อผ้า เพื่อค้นหาจุดใกล้คุณ</p>
       </header>
       <div class="donate-layout donate-layout-wide">
         <div class="field">
-          <span>เลือกชิ้นที่จะทิ้ง/บริจาค</span>
+          <span>ประเภทจุดปลายทาง</span>
+          <select id="destination-type">
+            <option value="recycling">จุดรับทำเป็นขยะรีไซเคิล</option>
+            <option value="resale">พื้นที่ขายต่อมือสอง</option>
+            <option value="donation">จุดรับบริจาค</option>
+          </select>
+        </div>
+        <div class="field">
+          <span>เลือกเสื้อผ้า</span>
           <select id="donate-select"></select>
         </div>
         <button id="locate-btn" class="btn-primary">ค้นหาจุดใกล้ฉัน</button>
