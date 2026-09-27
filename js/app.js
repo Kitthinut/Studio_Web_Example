@@ -80,10 +80,9 @@ function loadImageEl(dataUrl) {
 // ============================================================
 // AUTO COLOR DETECTION FROM UPLOADED PHOTO
 // ------------------------------------------------------------
-// Downscales the photo onto a small canvas, buckets pixels into
-// coarse color bins (ignoring near-white/near-black background
-// pixels), and reports the most common bin as the garment color,
-// with a confidence % = share of counted pixels in that bin.
+// Downscales the photo without changing its proportions, estimates
+// the background from image edges, then finds the most common
+// remaining color as the garment color.
 // Runs entirely on-device — no upload, no API.
 // ============================================================
 function rgbToHsl(r, g, b) {
@@ -111,27 +110,68 @@ function bucketFromHue(h, s, l) {
 }
 
 function detectDominantColor(imgEl) {
-  const SIZE = 48;
+  const SIZE = 64;
   const canvas = document.createElement("canvas");
   canvas.width = SIZE; canvas.height = SIZE;
   const ctx = canvas.getContext("2d");
-  ctx.drawImage(imgEl, 0, 0, SIZE, SIZE);
+  const imageWidth = imgEl.naturalWidth || imgEl.width;
+  const imageHeight = imgEl.naturalHeight || imgEl.height;
+  if (!imageWidth || !imageHeight) return null;
+  const scale = Math.min(SIZE / imageWidth, SIZE / imageHeight);
+  const drawWidth = imageWidth * scale;
+  const drawHeight = imageHeight * scale;
+  const drawX = (SIZE - drawWidth) / 2;
+  const drawY = (SIZE - drawHeight) / 2;
+  ctx.drawImage(imgEl, drawX, drawY, drawWidth, drawHeight);
   const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
 
-  const BIN = 32; // quantization step per channel
-  const bins = new Map(); // key -> { count, rSum, gSum, bSum }
+  const left = Math.floor(drawX), top = Math.floor(drawY);
+  const right = Math.ceil(drawX + drawWidth), bottom = Math.ceil(drawY + drawHeight);
+  const edgeBand = Math.max(1, Math.round(Math.min(drawWidth, drawHeight) * 0.08));
+  const edgeBins = new Map();
+
+  for (let y = top; y < bottom; y++) {
+    for (let x = left; x < right; x++) {
+      if (x >= left + edgeBand && x < right - edgeBand &&
+          y >= top + edgeBand && y < bottom - edgeBand) continue;
+      const index = (y * SIZE + x) * 4;
+      if (data[index + 3] < 128) continue;
+      const r = data[index], g = data[index + 1], b = data[index + 2];
+      const key = [Math.floor(r / 24), Math.floor(g / 24), Math.floor(b / 24)].join(",");
+      const bin = edgeBins.get(key) || { count: 0, rSum: 0, gSum: 0, bSum: 0 };
+      bin.count++; bin.rSum += r; bin.gSum += g; bin.bSum += b;
+      edgeBins.set(key, bin);
+    }
+  }
+
+  let background = null;
+  for (const bin of edgeBins.values()) {
+    if (!background || bin.count > background.count) background = bin;
+  }
+  if (background) {
+    background = {
+      r: background.rSum / background.count,
+      g: background.gSum / background.count,
+      b: background.bSum / background.count
+    };
+  }
+
+  const BIN = 24;
+  const bins = new Map();
   let counted = 0;
 
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
-    if (a < 128) continue;
-    // skip likely background: near-white or near-black
-    if ((r > 235 && g > 235 && b > 235) || (r < 12 && g < 12 && b < 12)) continue;
-    const key = [Math.floor(r / BIN), Math.floor(g / BIN), Math.floor(b / BIN)].join(",");
-    const bin = bins.get(key) || { count: 0, rSum: 0, gSum: 0, bSum: 0 };
-    bin.count++; bin.rSum += r; bin.gSum += g; bin.bSum += b;
-    bins.set(key, bin);
-    counted++;
+  for (let y = top; y < bottom; y++) {
+    for (let x = left; x < right; x++) {
+      const i = (y * SIZE + x) * 4;
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      if (data[i + 3] < 128) continue;
+      if (background && Math.hypot(r - background.r, g - background.g, b - background.b) < 38) continue;
+      const key = [Math.floor(r / BIN), Math.floor(g / BIN), Math.floor(b / BIN)].join(",");
+      const bin = bins.get(key) || { count: 0, rSum: 0, gSum: 0, bSum: 0 };
+      bin.count++; bin.rSum += r; bin.gSum += g; bin.bSum += b;
+      bins.set(key, bin);
+      counted++;
+    }
   }
 
   if (!counted) return null;
@@ -159,7 +199,7 @@ document.getElementById("f-image").addEventListener("change", async (e) => {
     if (result) {
       document.getElementById("f-color").value = result.hex;
       document.getElementById("f-colorbucket").value = result.bucket;
-      status.textContent = `ตรวจพบสีหลัก ${result.hex} จากรูป (ความมั่นใจ ${result.confidence}% ของพื้นที่ภาพ) — แก้ไขได้ถ้าไม่ตรง`;
+      status.textContent = `ตรวจพบสีหลักของเสื้อผ้า ${result.hex} (ความมั่นใจ ${result.confidence}% ของพิกเซลที่แยกจากพื้นหลัง) — แก้ไขได้ถ้าไม่ตรง`;
     } else {
       status.textContent = "ตรวจจับสีจากรูปไม่สำเร็จ กรุณาเลือกสีเอง";
     }
@@ -198,12 +238,14 @@ function applyDPPRecord(record) {
   }
   if (record.carbonFootprintKg != null) document.getElementById("f-carbon").value = record.carbonFootprintKg;
   if (record.recycledContent != null) document.getElementById("f-recycled").value = record.recycledContent;
+  currentDPPImage = record.image || null;
   currentDPPCare = record.care || null;
   currentDPPComposition = record.composition || null;
 }
 
 let currentDPPCare = null;
 let currentDPPComposition = null;
+let currentDPPImage = null;
 
 dppDemoSelect.addEventListener("change", () => {
   const rec = MOCK_DPP_REGISTRY[dppDemoSelect.value];
@@ -326,7 +368,7 @@ form.addEventListener("submit", async (e) => {
     carbonIsEstimated: !carbonInput,
     recycledContent: recycledInput ? parseInt(recycledInput, 10) : 0,
     seasons: Array.from(selectedSeasons),
-    image: imageData || existingItem?.image || null
+    image: imageData || currentDPPImage || existingItem?.image || null
   };
   if (existingItem) items = items.map(i => i.id === item.id ? item : i);
   else items.push(item);
@@ -345,6 +387,7 @@ function resetItemForm() {
   document.getElementById("color-detect-status").textContent = "";
   currentDPPCare = null;
   currentDPPComposition = null;
+  currentDPPImage = null;
   form.querySelector('[type="submit"]').textContent = "บันทึกลงตู้เสื้อผ้า";
   cancelEditBtn.hidden = true;
 }
@@ -436,11 +479,27 @@ function escapeHTML(str) {
 // ============================================================
 // MATCH TAB
 // ============================================================
-// Simple color-harmony rule: neutral goes with anything;
-// same bucket = analogous match; warm+cool = lower score but still shown.
-function colorScore(a, b) {
-  if (a === "neutral" || b === "neutral") return 3;
-  if (a === b) return 2;
+// Neutrals pair freely; nearby and complementary hues score well.
+function itemColor(item) {
+  if (typeof item.color === "string" && /^#[0-9a-f]{6}$/i.test(item.color)) return item.color;
+  return { neutral: "#A9A29A", warm: "#B5533C", cool: "#587887" }[item.colorBucket] || "#8A7F6A";
+}
+
+function colorScore(firstItem, secondItem) {
+  const colors = [firstItem, secondItem].map(item => {
+    const hex = itemColor(item);
+    const rgb = [1, 3, 5].map(offset => parseInt(hex.slice(offset, offset + 2), 16));
+    return rgbToHsl(...rgb);
+  });
+  const [[firstHue, firstSaturation, firstLightness], [secondHue, secondSaturation, secondLightness]] = colors;
+  const firstNeutral = firstSaturation < 0.18 || firstLightness > 0.9 || firstLightness < 0.12;
+  const secondNeutral = secondSaturation < 0.18 || secondLightness > 0.9 || secondLightness < 0.12;
+  if (firstNeutral || secondNeutral) return 3;
+
+  const hueDistance = Math.abs(firstHue - secondHue);
+  const hueGap = Math.min(hueDistance, 360 - hueDistance);
+  if (hueGap <= 25) return 3;
+  if (hueGap <= 65 || hueGap >= 150) return 2;
   return 1;
 }
 // Very light type-pairing rule: don't pair a top with a top, etc.
@@ -483,7 +542,7 @@ function renderMatches() {
     .filter(i => i.id !== base.id && typesPair(base.type, i.type))
     .map(i => ({
       item: i,
-      score: colorScore(base.colorBucket, i.colorBucket) + seasonOverlap(base.seasons, i.seasons)
+      score: colorScore(base, i) + seasonOverlap(base.seasons, i.seasons)
     }))
     .sort((a, b) => b.score - a.score);
 
@@ -528,7 +587,7 @@ function buildFullOutfit(baseItem, chosenMatch) {
       .filter(i => outfit.every(o => typesPair(o.type, i.type) || o.type === i.type))
       .map(i => ({
         item: i,
-        score: outfit.reduce((s, o) => s + colorScore(o.colorBucket, i.colorBucket) + seasonOverlap(o.seasons, i.seasons), 0)
+        score: outfit.reduce((s, o) => s + colorScore(o, i) + seasonOverlap(o.seasons, i.seasons), 0)
       }))
       .sort((a, b) => b.score - a.score);
     if (candidates.length) {
@@ -554,7 +613,7 @@ function openOutfitModal(baseItem, chosenMatch) {
     </div>`).join("");
 
   palette.innerHTML = outfit.map(i => `
-    <div class="palette-swatch" style="background:${i.color}" title="${escapeHTML(i.name)}: ${i.color}"></div>`).join("");
+    <div class="palette-swatch" style="background:${itemColor(i)}" title="${escapeHTML(i.name)}: ${itemColor(i)}"></div>`).join("");
 
   const totalCarbon = outfit.reduce((s, i) => s + (i.carbonFootprintKg || 0), 0);
   const avgRecycled = Math.round(outfit.reduce((s, i) => s + (i.recycledContent || 0), 0) / outfit.length);

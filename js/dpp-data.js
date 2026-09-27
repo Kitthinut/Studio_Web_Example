@@ -18,48 +18,50 @@
 // ============================================================
 
 const MOCK_DPP_REGISTRY = {
-  "DPP-000123": {
-    name: "เสื้อยืดคอกลม ผ้าฝ้ายออร์แกนิก",
-    brand: "Nordic Basics · ผลิตในโปรตุเกส",
-    composition: [{ material: "ผ้าฝ้ายออร์แกนิก (Organic Cotton)", percent: 95 },
-                  { material: "อีลาสเทน (Elastane)", percent: 5 }],
-    color: "#E4E0D5",
-    colorBucket: "neutral",
-    care: "ซักเครื่องน้ำเย็น ไม่ฟอกขาว ตากผึ่งลม",
-    carbonFootprintKg: 4.8,
-    recycledContent: 20,
-    type: "top"
+  "DPP-DEMO-COAT": {
+    name: "เสื้อโค้ตสีน้ำตาล (ตัวอย่าง)",
+    brand: "Wardrobe Demo · ข้อมูลสาธิต",
+    composition: [{ material: "ขนสัตว์ (Wool)", percent: 60 },
+                  { material: "โพลีเอสเตอร์ (Polyester)", percent: 40 }],
+    color: "#75604F",
+    colorBucket: "warm",
+    care: "ข้อมูลการดูแลจำลอง — ตรวจสอบจากป้ายจริง",
+    carbonFootprintKg: 20.0,
+    recycledContent: 0,
+    type: "outer",
+    image: "assets/clothes/coat.jpg"
   },
-  "DPP-000456": {
-    name: "กางเกงยีนส์ทรงตรง",
-    brand: "Atelier Loop · ผลิตในตุรกี",
-    composition: [{ material: "ผ้าฝ้าย (Cotton)", percent: 78 },
-                  { material: "โพลีเอสเตอร์รีไซเคิล (Recycled Polyester)", percent: 20 },
+  "DPP-DEMO-CREAM": {
+    name: "เสื้อสีครีม (ตัวอย่าง)",
+    brand: "Wardrobe Demo · ข้อมูลสาธิต",
+    composition: [{ material: "ผ้าฝ้าย (Cotton)", percent: 100 }],
+    color: "#E8E1D3",
+    colorBucket: "neutral",
+    care: "ข้อมูลการดูแลจำลอง — ตรวจสอบจากป้ายจริง",
+    carbonFootprintKg: 9.1,
+    recycledContent: 0,
+    type: "top",
+    image: "assets/clothes/cream.jpg"
+  },
+  "DPP-DEMO-JEANS": {
+    name: "กางเกงยีนส์ (ตัวอย่าง)",
+    brand: "Wardrobe Demo · ข้อมูลสาธิต",
+    composition: [{ material: "ผ้าฝ้าย (Cotton)", percent: 98 },
                   { material: "อีลาสเทน (Elastane)", percent: 2 }],
     color: "#3B4A63",
     colorBucket: "cool",
-    care: "ซักกลับด้าน น้ำเย็น ตากผึ่งลม",
+    care: "ข้อมูลการดูแลจำลอง — ตรวจสอบจากป้ายจริง",
     carbonFootprintKg: 18.5,
-    recycledContent: 20,
-    type: "bottom"
-  },
-  "DPP-000789": {
-    name: "แจ็กเก็ตกันลม",
-    brand: "Circular Wear · ผลิตในเวียดนาม",
-    composition: [{ material: "โพลีเอสเตอร์รีไซเคิล (Recycled Polyester)", percent: 100 }],
-    color: "#6E7A5E",
-    colorBucket: "warm",
-    care: "ซักเครื่องน้ำเย็น ห้ามอบแห้ง",
-    carbonFootprintKg: 22.0,
-    recycledContent: 100,
-    type: "outer"
+    recycledContent: 0,
+    type: "bottom",
+    image: "assets/clothes/jeans.jpg"
   }
 };
 
 // Try to make sense of whatever a QR code contains:
 // 1) raw JSON matching our schema
 // 2) a URL/string containing one of our mock DPP ids (e.g. a GS1
-//    Digital Link style URL: https://id.example.eu/dpp/DPP-000123)
+//    Digital Link style URL: https://id.example.eu/dpp/DPP-DEMO-COAT)
 // 3) a bare id like "DPP-000123"
 function resolveDPP(scannedText) {
   if (!scannedText) return null;
