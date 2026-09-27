@@ -545,3 +545,11 @@ input[type=file]{font-size:14px;max-width:100%;}
   #donate-map{height:300px;}
 }
 
+button,
+input,
+select,
+textarea,
+option{
+  font-family:"DM Sans","Noto Sans Thai",sans-serif;
+}
+
