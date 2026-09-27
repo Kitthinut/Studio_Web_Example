@@ -31,6 +31,15 @@
     <button class="rail-tab" data-tab="donate">
       <span class="tab-icon">📍</span><span>จุดบริจาค</span>
     </button>
+    <div class="rail-owner">
+      <label for="active-owner">เจ้าของที่กำลังเพิ่ม</label>
+      <select id="active-owner" aria-label="เลือกเจ้าของเสื้อผ้าที่จะเพิ่ม">
+        <option value="A">A</option>
+        <option value="B">B</option>
+        <option value="C">C</option>
+        <option value="D">D</option>
+      </select>
+    </div>
   </nav>
 
   <!-- Main -->
@@ -42,6 +51,39 @@
         <h1>ตู้เสื้อผ้าของฉัน</h1>
         <p class="sub">บันทึกชนิดผ้าจากป้าย — พิมพ์เองหรือสแกนป้ายด้วยกล้อง</p>
       </header>
+
+      <div class="closet-filters" aria-label="ตัวกรองเสื้อผ้า">
+        <label class="closet-filter">
+          <span>โทนสี</span>
+          <select id="filter-color">
+            <option value="">ทุกโทนสี</option>
+            <option value="cool">โทนเย็น</option>
+            <option value="warm">โทนอุ่น</option>
+            <option value="neutral">Neutral</option>
+          </select>
+        </label>
+        <label class="closet-filter">
+          <span>แบรนด์</span>
+          <select id="filter-brand"><option value="">ทุกแบรนด์</option></select>
+        </label>
+        <label class="closet-filter">
+          <span>เจ้าของ</span>
+          <select id="filter-owner"><option value="">ทุกคน</option></select>
+        </label>
+        <label class="closet-filter">
+          <span>ประเภท</span>
+          <select id="filter-type">
+            <option value="">ทุกประเภท</option>
+            <option value="top">เสื้อ</option>
+            <option value="bottom">กางเกง/กระโปรง</option>
+            <option value="dress">ชุดเดรส</option>
+            <option value="outer">เสื้อคลุม</option>
+            <option value="accessory">เครื่องประดับ</option>
+            <option value="shoes">รองเท้า</option>
+          </select>
+        </label>
+        <button type="button" id="clear-filters" class="btn-ghost">ล้างตัวกรอง</button>
+      </div>
 
       <div class="closet-layout">
         <form id="item-form" class="swatch-card form-card">

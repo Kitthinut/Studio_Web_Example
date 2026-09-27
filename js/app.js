@@ -2,6 +2,8 @@
 // STATE + STORAGE
 // ============================================================
 const STORAGE_KEY = "wardrobe_items_v1";
+const OWNER_STORAGE_KEY = "wardrobe_active_owner_v1";
+const OWNER_NAMES = ["A", "B", "C", "D"];
 
 function loadItems() {
   try {
@@ -23,6 +25,14 @@ function saveItems(items) {
 
 let items = loadItems();
 let editingItemId = null;
+let currentDetectedPalette = [];
+let activeOwner = OWNER_NAMES[0];
+try {
+  const savedOwner = localStorage.getItem(OWNER_STORAGE_KEY);
+  if (OWNER_NAMES.includes(savedOwner)) activeOwner = savedOwner;
+} catch (e) {
+  console.error("Could not read active wardrobe owner:", e);
+}
 
 const TYPE_LABEL = {
   top: "เสื้อ", bottom: "กางเกง/กระโปรง", dress: "ชุดเดรส",
@@ -42,6 +52,17 @@ document.querySelectorAll(".rail-tab").forEach(btn => {
     if (btn.dataset.tab === "match") renderMatchSelect();
     if (btn.dataset.tab === "donate") renderDonateSelect();
   });
+});
+
+const activeOwnerSelect = document.getElementById("active-owner");
+activeOwnerSelect.value = activeOwner;
+activeOwnerSelect.addEventListener("change", () => {
+  activeOwner = activeOwnerSelect.value;
+  try {
+    localStorage.setItem(OWNER_STORAGE_KEY, activeOwner);
+  } catch (e) {
+    console.error("Could not save active wardrobe owner:", e);
+  }
 });
 
 // ============================================================
@@ -78,12 +99,7 @@ function loadImageEl(dataUrl) {
 }
 
 // ============================================================
-// AUTO COLOR DETECTION FROM UPLOADED PHOTO
-// ------------------------------------------------------------
-// Downscales the photo without changing its proportions, estimates
-// the background from image edges, then finds the most common
-// remaining color as the garment color.
-// Runs entirely on-device — no upload, no API.
+// MULTI-COLOR PALETTE DETECTION FROM UPLOADED PHOTO
 // ============================================================
 function rgbToHsl(r, g, b) {
   r /= 255; g /= 255; b /= 255;
@@ -109,25 +125,29 @@ function bucketFromHue(h, s, l) {
   return "cool";
 }
 
-function detectDominantColor(imgEl) {
+function detectItemPalette(imgEl, colorCount = 3) {
   const SIZE = 64;
   const canvas = document.createElement("canvas");
-  canvas.width = SIZE; canvas.height = SIZE;
+  canvas.width = canvas.height = SIZE;
   const ctx = canvas.getContext("2d");
-  const imageWidth = imgEl.naturalWidth || imgEl.width;
-  const imageHeight = imgEl.naturalHeight || imgEl.height;
-  if (!imageWidth || !imageHeight) return null;
-  const scale = Math.min(SIZE / imageWidth, SIZE / imageHeight);
-  const drawWidth = imageWidth * scale;
-  const drawHeight = imageHeight * scale;
-  const drawX = (SIZE - drawWidth) / 2;
-  const drawY = (SIZE - drawHeight) / 2;
-  ctx.drawImage(imgEl, drawX, drawY, drawWidth, drawHeight);
+
+  const imgW = imgEl.naturalWidth || imgEl.width;
+  const imgH = imgEl.naturalHeight || imgEl.height;
+  if (!imgW || !imgH) return null;
+
+  const scale = Math.min(SIZE / imgW, SIZE / imgH);
+  const drawW = imgW * scale;
+  const drawH = imgH * scale;
+  const drawX = (SIZE - drawW) / 2;
+  const drawY = (SIZE - drawH) / 2;
+  ctx.drawImage(imgEl, drawX, drawY, drawW, drawH);
+
   const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
 
+  // Background estimation from edges
   const left = Math.floor(drawX), top = Math.floor(drawY);
-  const right = Math.ceil(drawX + drawWidth), bottom = Math.ceil(drawY + drawHeight);
-  const edgeBand = Math.max(1, Math.round(Math.min(drawWidth, drawHeight) * 0.08));
+  const right = Math.ceil(drawX + drawW), bottom = Math.ceil(drawY + drawH);
+  const edgeBand = Math.max(1, Math.round(Math.min(drawW, drawH) * 0.08));
   const edgeBins = new Map();
 
   for (let y = top; y < bottom; y++) {
@@ -156,6 +176,7 @@ function detectDominantColor(imgEl) {
     };
   }
 
+  // Extract color palette
   const BIN = 24;
   const bins = new Map();
   let counted = 0;
@@ -166,7 +187,7 @@ function detectDominantColor(imgEl) {
       const r = data[i], g = data[i + 1], b = data[i + 2];
       if (data[i + 3] < 128) continue;
       if (background && Math.hypot(r - background.r, g - background.g, b - background.b) < 38) continue;
-      const key = [Math.floor(r / BIN), Math.floor(g / BIN), Math.floor(b / BIN)].join(",");
+      const key = [Math.floor(r / BIN) * BIN, Math.floor(g / BIN) * BIN, Math.floor(b / BIN) * BIN].join(",");
       const bin = bins.get(key) || { count: 0, rSum: 0, gSum: 0, bSum: 0 };
       bin.count++; bin.rSum += r; bin.gSum += g; bin.bSum += b;
       bins.set(key, bin);
@@ -175,50 +196,63 @@ function detectDominantColor(imgEl) {
   }
 
   if (!counted) return null;
-  let winner = null;
-  for (const bin of bins.values()) if (!winner || bin.count > winner.count) winner = bin;
 
-  const r = Math.round(winner.rSum / winner.count);
-  const g = Math.round(winner.gSum / winner.count);
-  const b = Math.round(winner.bSum / winner.count);
-  const hex = "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("");
-  const [h, s, l] = rgbToHsl(r, g, b);
-  const confidence = Math.round((winner.count / counted) * 100);
-  return { hex, bucket: bucketFromHue(h, s, l), confidence };
+  const sortedBins = [...bins.values()].sort((a, b) => b.count - a.count);
+  const palette = sortedBins.slice(0, colorCount).map(bin => {
+    const r = Math.round(bin.rSum / bin.count);
+    const g = Math.round(bin.gSum / bin.count);
+    const b = Math.round(bin.bSum / bin.count);
+    return "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("");
+  });
+
+  const dominantR = Math.round(sortedBins[0].rSum / sortedBins[0].count);
+  const dominantG = Math.round(sortedBins[0].gSum / sortedBins[0].count);
+  const dominantB = Math.round(sortedBins[0].bSum / sortedBins[0].count);
+  const dominantHex = "#" + [dominantR, dominantG, dominantB].map(v => v.toString(16).padStart(2, "0")).join("");
+  const [h, s, l] = rgbToHsl(dominantR, dominantG, dominantB);
+  const confidence = Math.round((sortedBins[0].count / counted) * 100);
+
+  return {
+    hex: dominantHex,
+    palette,
+    bucket: bucketFromHue(h, s, l),
+    confidence
+  };
 }
 
 document.getElementById("f-image").addEventListener("change", async (e) => {
   const file = e.target.files[0];
   const status = document.getElementById("color-detect-status");
   if (!file) { status.textContent = ""; return; }
-  status.textContent = "กำลังตรวจจับสีจากรูป…";
+  status.textContent = "กำลังตรวจจับสีและพาเลตจากรูป…";
   try {
     const dataUrl = await fileToDataURL(file);
     const img = await loadImageEl(dataUrl);
-    const result = detectDominantColor(img);
+    const result = detectItemPalette(img);
     if (result) {
       document.getElementById("f-color").value = result.hex;
       document.getElementById("f-colorbucket").value = result.bucket;
-      status.textContent = `ตรวจพบสีหลักของเสื้อผ้า ${result.hex} (ความมั่นใจ ${result.confidence}% ของพิกเซลที่แยกจากพื้นหลัง) — แก้ไขได้ถ้าไม่ตรง`;
+      currentDetectedPalette = result.palette;
+      status.textContent = `ตรวจพบสีหลัก ${result.hex} และพาเลตประจำชิ้น (${result.palette.join(", ")}) — ความมั่นใจ ${result.confidence}%`;
     } else {
       status.textContent = "ตรวจจับสีจากรูปไม่สำเร็จ กรุณาเลือกสีเอง";
+      currentDetectedPalette = [];
     }
   } catch (err) {
     console.error(err);
     status.textContent = "ตรวจจับสีจากรูปไม่สำเร็จ กรุณาเลือกสีเอง";
+    currentDetectedPalette = [];
   }
 });
 
 // ============================================================
-// DPP (Digital Product Passport) QR SCAN — see js/dpp-data.js
-// for what this demo layer can and can't do.
+// DPP (Digital Product Passport) QR SCAN
 // ============================================================
 const dppScanBtn = document.getElementById("dpp-scan-btn");
 const dppScanInput = document.getElementById("dpp-scan-input");
 const dppStatus = document.getElementById("dpp-status");
 const dppDemoSelect = document.getElementById("dpp-demo-select");
 
-// populate the "try a sample DPP" dropdown from the mock registry
 Object.entries(MOCK_DPP_REGISTRY).forEach(([id, rec]) => {
   const opt = document.createElement("option");
   opt.value = id;
@@ -238,6 +272,7 @@ function applyDPPRecord(record) {
   }
   if (record.carbonFootprintKg != null) document.getElementById("f-carbon").value = record.carbonFootprintKg;
   if (record.recycledContent != null) document.getElementById("f-recycled").value = record.recycledContent;
+  currentDetectedPalette = record.palette || (record.color ? [record.color] : []);
   currentDPPImage = record.image || null;
   currentDPPCare = record.care || null;
   currentDPPComposition = record.composition || null;
@@ -291,7 +326,7 @@ dppScanInput.addEventListener("change", async () => {
 });
 
 // ============================================================
-// TAG SCAN (on-device OCR via Tesseract.js — no server needed)
+// TAG SCAN (on-device OCR via Tesseract.js)
 // ============================================================
 const FABRIC_KEYWORDS = [
   { match: /cotton|ฝ้าย/i, label: "ผ้าฝ้าย (Cotton)" },
@@ -352,14 +387,17 @@ form.addEventListener("submit", async (e) => {
   const carbonInput = document.getElementById("f-carbon").value.trim();
   const recycledInput = document.getElementById("f-recycled").value.trim();
   const existingItem = items.find(i => i.id === editingItemId);
+  const chosenColor = document.getElementById("f-color").value;
 
   const item = {
     ...existingItem,
     id: existingItem ? existingItem.id : Date.now().toString(36),
     name: document.getElementById("f-name").value.trim(),
     brand: document.getElementById("f-brand").value.trim() || null,
+    owner: existingItem ? existingItem.owner || "ไม่ระบุ" : activeOwner,
     type,
-    color: document.getElementById("f-color").value,
+    color: chosenColor,
+    palette: currentDetectedPalette.length ? currentDetectedPalette : (existingItem?.palette || [chosenColor]),
     colorBucket: document.getElementById("f-colorbucket").value,
     fabric,
     composition: currentDPPComposition ?? existingItem?.composition ?? null,
@@ -380,6 +418,7 @@ form.addEventListener("submit", async (e) => {
 function resetItemForm() {
   form.reset();
   editingItemId = null;
+  currentDetectedPalette = [];
   selectedSeasons.clear();
   document.querySelectorAll("#f-season .chip").forEach(c => c.classList.remove("is-on"));
   scanStatus.textContent = "";
@@ -406,6 +445,7 @@ function startEditingItem(id) {
   document.getElementById("f-carbon").value = item.carbonIsEstimated ? "" : item.carbonFootprintKg ?? "";
   document.getElementById("f-recycled").value = item.recycledContent ?? 0;
   document.getElementById("f-image").value = "";
+  currentDetectedPalette = item.palette || [];
   currentDPPCare = item.care || null;
   currentDPPComposition = item.composition || null;
 
@@ -428,15 +468,35 @@ cancelEditBtn.addEventListener("click", resetItemForm);
 // ============================================================
 function renderCloset() {
   const grid = document.getElementById("closet-grid");
+  const brandFilter = document.getElementById("filter-brand");
+  const ownerFilter = document.getElementById("filter-owner");
+  updateFilterOptions(brandFilter, items.map(item => item.brand), "ทุกแบรนด์");
+  updateFilterOptions(ownerFilter, items.map(item => item.owner || "ไม่ระบุ"), "ทุกคน");
   grid.innerHTML = "";
   if (!items.length) {
     grid.innerHTML = `<div class="empty-note">ตู้เสื้อผ้ายังว่างอยู่ — เพิ่มชิ้นแรกของคุณทางซ้าย</div>`;
     return;
   }
-  items.forEach(item => {
+  const colorFilter = document.getElementById("filter-color").value;
+  const typeFilter = document.getElementById("filter-type").value;
+  const visibleItems = items.filter(item =>
+    (!colorFilter || item.colorBucket === colorFilter) &&
+    (!brandFilter.value || item.brand === brandFilter.value) &&
+    (!ownerFilter.value || (item.owner || "ไม่ระบุ") === ownerFilter.value) &&
+    (!typeFilter || item.type === typeFilter)
+  );
+  if (!visibleItems.length) {
+    grid.innerHTML = `<div class="empty-note">ไม่พบเสื้อผ้าที่ตรงกับตัวกรอง</div>`;
+    return;
+  }
+  visibleItems.forEach(item => {
     const card = document.createElement("div");
     card.className = "item-card";
     const carbon = item.carbonFootprintKg;
+    const itemPaletteHtml = (item.palette || [itemColor(item)])
+      .map(c => `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${c};margin-right:3px;border:1px solid rgba(0,0,0,0.1)"></span>`)
+      .join("");
+
     card.innerHTML = `
       <div class="item-thumb" style="${item.image ? `background-image:url('${item.image}')` : ""}">
         ${item.image ? "" : "👕"}
@@ -444,7 +504,9 @@ function renderCloset() {
       <div class="item-body">
         <div class="item-name">${escapeHTML(item.name)}</div>
         ${item.brand ? `<div class="item-meta">${escapeHTML(item.brand)}</div>` : ""}
+        <div class="item-meta">เจ้าของ: ${escapeHTML(item.owner || "ไม่ระบุ")}</div>
         <div class="item-meta">${TYPE_LABEL[item.type] || item.type} · ${(item.seasons || []).map(s => SEASON_LABEL[s]).join(", ") || "ทุกฤดู"}</div>
+        <div class="item-meta" style="display:flex;align-items:center;margin-top:4px;">พาเลต: ${itemPaletteHtml}</div>
         <span class="fabric-tag">${escapeHTML(item.fabric)}</span>
         ${item.care ? `<div class="item-meta item-care">🧺 ${escapeHTML(item.care)}</div>` : ""}
         <div class="eco-badges">
@@ -470,6 +532,22 @@ function renderCloset() {
   });
 }
 
+function updateFilterOptions(select, values, allLabel) {
+  const currentValue = select.value;
+  const options = [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  select.replaceChildren(new Option(allLabel, ""));
+  options.forEach(value => select.add(new Option(value, value)));
+  select.value = options.includes(currentValue) ? currentValue : "";
+}
+
+document.querySelectorAll("#filter-color, #filter-brand, #filter-owner, #filter-type")
+  .forEach(select => select.addEventListener("change", renderCloset));
+document.getElementById("clear-filters").addEventListener("click", () => {
+  document.querySelectorAll("#filter-color, #filter-brand, #filter-owner, #filter-type")
+    .forEach(select => { select.value = ""; });
+  renderCloset();
+});
+
 function escapeHTML(str) {
   const d = document.createElement("div");
   d.textContent = str;
@@ -477,32 +555,56 @@ function escapeHTML(str) {
 }
 
 // ============================================================
-// MATCH TAB
+// PALETTE MATCHING ALGORITHM
 // ============================================================
-// Neutrals pair freely; nearby and complementary hues score well.
 function itemColor(item) {
   if (typeof item.color === "string" && /^#[0-9a-f]{6}$/i.test(item.color)) return item.color;
   return { neutral: "#A9A29A", warm: "#B5533C", cool: "#587887" }[item.colorBucket] || "#8A7F6A";
 }
 
-function colorScore(firstItem, secondItem) {
-  const colors = [firstItem, secondItem].map(item => {
-    const hex = itemColor(item);
-    const rgb = [1, 3, 5].map(offset => parseInt(hex.slice(offset, offset + 2), 16));
-    return rgbToHsl(...rgb);
-  });
-  const [[firstHue, firstSaturation, firstLightness], [secondHue, secondSaturation, secondLightness]] = colors;
-  const firstNeutral = firstSaturation < 0.18 || firstLightness > 0.9 || firstLightness < 0.12;
-  const secondNeutral = secondSaturation < 0.18 || secondLightness > 0.9 || secondLightness < 0.12;
-  if (firstNeutral || secondNeutral) return 3;
-
-  const hueDistance = Math.abs(firstHue - secondHue);
-  const hueGap = Math.min(hueDistance, 360 - hueDistance);
-  if (hueGap <= 25) return 3;
-  if (hueGap <= 65 || hueGap >= 150) return 2;
-  return 1;
+function itemPaletteColors(item) {
+  const colors = Array.isArray(item.palette) ? item.palette : [];
+  return [...new Set([itemColor(item), ...colors].filter(color => /^#[0-9a-f]{6}$/i.test(color)))];
 }
-// Very light type-pairing rule: don't pair a top with a top, etc.
+
+function pairHarmonyScore(firstColor, secondColor) {
+  const parseRgb = hex => [1, 3, 5].map(offset => parseInt(hex.slice(offset, offset + 2), 16));
+  const firstHsl = rgbToHsl(...parseRgb(firstColor));
+  const secondHsl = rgbToHsl(...parseRgb(secondColor));
+  const firstNeutral = firstHsl[1] < 0.18 || firstHsl[2] > 0.9 || firstHsl[2] < 0.12;
+  const secondNeutral = secondHsl[1] < 0.18 || secondHsl[2] > 0.9 || secondHsl[2] < 0.12;
+  if (firstNeutral || secondNeutral) return 88;
+
+  const hueDifference = Math.abs(firstHsl[0] - secondHsl[0]);
+  const hueGap = Math.min(hueDifference, 360 - hueDifference);
+  let score = 56;
+  if (hueGap <= 18) score = 94;
+  else if (hueGap <= 38) score = 86;
+  else if (hueGap <= 70) score = 76;
+  else if (hueGap >= 155) score = 90;
+  else if (hueGap >= 125) score = 82;
+
+  const lightnessGap = Math.abs(firstHsl[2] - secondHsl[2]);
+  return Math.max(40, score - Math.max(0, lightnessGap - 0.45) * 30);
+}
+
+function getBestMatchingPalette(outfitItems) {
+  const colors = [...new Set(outfitItems.flatMap(itemPaletteColors))];
+  const pairScores = [];
+  for (let first = 0; first < colors.length; first++) {
+    for (let second = first + 1; second < colors.length; second++) {
+      pairScores.push(pairHarmonyScore(colors[first], colors[second]));
+    }
+  }
+  const score = pairScores.length
+    ? Math.round(pairScores.reduce((sum, value) => sum + value, 0) / pairScores.length)
+    : 100;
+  return {
+    palette: { name: "พาเลตจากสีเสื้อผ้าในชุด", colors },
+    score
+  };
+}
+
 function typesPair(a, b) {
   const pairable = {
     top: ["bottom", "outer", "accessory", "shoes"],
@@ -514,6 +616,7 @@ function typesPair(a, b) {
   };
   return (pairable[a] || []).includes(b);
 }
+
 function seasonOverlap(a, b) {
   if (!a.length || !b.length) return 1;
   return a.some(s => b.includes(s)) ? 1 : 0;
@@ -540,17 +643,25 @@ function renderMatches() {
   const base = items.find(i => i.id === sel.value) || items[0];
   const scored = items
     .filter(i => i.id !== base.id && typesPair(base.type, i.type))
-    .map(i => ({
-      item: i,
-      score: colorScore(base, i) + seasonOverlap(base.seasons, i.seasons)
-    }))
+    .map(candidate => {
+      const outfit = [base, candidate];
+      const paletteMatch = getBestMatchingPalette(outfit);
+      const totalScore = Math.min(100, paletteMatch.score + (seasonOverlap(base.seasons, candidate.seasons) * 10));
+
+      return {
+        item: candidate,
+        score: totalScore,
+        matchedPalette: paletteMatch.palette
+      };
+    })
     .sort((a, b) => b.score - a.score);
 
   if (!scored.length) {
     results.innerHTML = `<div class="empty-note">ยังไม่มีชิ้นที่จับคู่กับ “${escapeHTML(base.name)}” ได้ ลองเพิ่มชิ้นอื่นในตู้</div>`;
     return;
   }
-  scored.slice(0, 6).forEach(({ item, score }) => {
+
+  scored.slice(0, 6).forEach(({ item, score, matchedPalette }) => {
     const row = document.createElement("div");
     row.className = "match-pair";
     row.innerHTML = `
@@ -558,21 +669,22 @@ function renderMatches() {
       <div>
         <div class="item-name">${escapeHTML(item.name)}</div>
         <div class="item-meta">${TYPE_LABEL[item.type]} · ${escapeHTML(item.fabric)}</div>
+        <div class="item-meta">โทนพาเลต: <strong>${escapeHTML(matchedPalette.name)}</strong></div>
+        <div class="match-palette" aria-label="สีในพาเลตชุดนี้">${matchedPalette.colors.map(color =>
+          `<span class="match-palette-swatch" style="background:${color}" title="${color}"></span>`).join("")}</div>
       </div>
-      <span class="score">${score >= 4 ? "เข้ากันมาก" : score >= 2 ? "เข้ากันได้" : "พอเข้ากัน"}</span>
+      <span class="score">${score}% เข้ากัน</span>
       <button class="btn-ghost btn-look" data-id="${item.id}">ดูลุคเต็ม</button>`;
     results.appendChild(row);
   });
+
   results.querySelectorAll(".btn-look").forEach(btn => {
     btn.addEventListener("click", () => openOutfitModal(base, items.find(i => i.id === btn.dataset.id)));
   });
 }
 
 // ------------------------------------------------------------
-// Full outfit "build": takes the base item + the chosen match,
-// then rounds out the look by picking the best-scoring item
-// from any other still-unused categories (outer/shoes/accessory
-// etc.), so the popup shows a complete outfit, not just a pair.
+// Full outfit build
 // ------------------------------------------------------------
 function buildFullOutfit(baseItem, chosenMatch) {
   const outfit = [baseItem, chosenMatch];
@@ -585,16 +697,19 @@ function buildFullOutfit(baseItem, chosenMatch) {
     const candidates = items
       .filter(i => !usedIds.has(i.id) && i.type === type)
       .filter(i => outfit.every(o => typesPair(o.type, i.type) || o.type === i.type))
-      .map(i => ({
-        item: i,
-        score: outfit.reduce((s, o) => s + colorScore(o, i) + seasonOverlap(o.seasons, i.seasons), 0)
-      }))
+      .map(candidate => {
+        const testOutfit = [...outfit, candidate];
+        const match = getBestMatchingPalette(testOutfit);
+        return { item: candidate, score: match.score };
+      })
       .sort((a, b) => b.score - a.score);
-    if (candidates.length) {
+
+    if (candidates.length && candidates[0].score > 40) {
       outfit.push(candidates[0].item);
       usedIds.add(candidates[0].item.id);
     }
   });
+
   return outfit;
 }
 
@@ -603,7 +718,10 @@ function openOutfitModal(baseItem, chosenMatch) {
   const board = document.getElementById("outfit-board");
   const palette = document.getElementById("outfit-palette");
   const impact = document.getElementById("outfit-impact");
-  document.getElementById("outfit-modal-title").textContent = `ลุค: ${outfit.map(i => i.name).join(" + ")}`;
+
+  const bestMatch = getBestMatchingPalette(outfit);
+
+  document.getElementById("outfit-modal-title").textContent = `ลุค: ${outfit.map(i => i.name).join(" + ")} (เข้ากับพาเลต: ${bestMatch.palette.name})`;
 
   board.innerHTML = outfit.map(i => `
     <div class="outfit-piece outfit-piece--${i.type}">
@@ -612,12 +730,13 @@ function openOutfitModal(baseItem, chosenMatch) {
       <div class="outfit-piece-meta">${TYPE_LABEL[i.type]} · ${escapeHTML(i.fabric)}</div>
     </div>`).join("");
 
-  palette.innerHTML = outfit.map(i => `
-    <div class="palette-swatch" style="background:${itemColor(i)}" title="${escapeHTML(i.name)}: ${itemColor(i)}"></div>`).join("");
+  palette.innerHTML = bestMatch.palette.colors.map(colorHex => `
+    <div class="palette-swatch" style="background:${colorHex}" title="Color: ${colorHex}"></div>`).join("");
 
   const totalCarbon = outfit.reduce((s, i) => s + (i.carbonFootprintKg || 0), 0);
   const avgRecycled = Math.round(outfit.reduce((s, i) => s + (i.recycledContent || 0), 0) / outfit.length);
-  impact.innerHTML = `🌍 คาร์บอนฟุตพรินท์รวมของลุคนี้ ≈ <strong>${totalCarbon.toFixed(1)} กก. CO2e</strong> (ค่าประมาณ)
+  impact.innerHTML = `🎨 คะแนนความเข้ากันของพาเลตสี: <strong>${bestMatch.score}%</strong> (${bestMatch.palette.name})<br>
+    🌍 คาร์บอนฟุตพรินท์รวม ≈ <strong>${totalCarbon.toFixed(1)} กก. CO2e</strong>
     &nbsp;·&nbsp; ♻️ เนื้อผ้ารีไซเคิลเฉลี่ย <strong>${avgRecycled}%</strong>`;
 
   document.getElementById("outfit-modal").classList.add("is-open");
@@ -698,11 +817,7 @@ document.getElementById("locate-btn").addEventListener("click", () => {
   );
 });
 
-// ------------------------------------------------------------
-// Map view (Leaflet + OpenStreetMap tiles — free, no API key).
-// Behaves like a Google Maps pin view: markers with popups that
-// deep-link out to Google Maps for turn-by-turn directions.
-// ------------------------------------------------------------
+// Map view
 let donateMapInstance = null;
 let donateMapMarkers = [];
 
@@ -739,7 +854,7 @@ function renderDonateMap(points, userLoc) {
   });
 
   if (bounds.length) donateMapInstance.fitBounds(bounds, { padding: [30, 30] });
-  else donateMapInstance.setView([13.7563, 100.5018], 11); // fallback: Bangkok
+  else donateMapInstance.setView([13.7563, 100.5018], 11);
   setTimeout(() => donateMapInstance.invalidateSize(), 150);
 }
 

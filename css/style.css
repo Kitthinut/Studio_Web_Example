@@ -82,6 +82,8 @@ p{margin:0;}
   color:#fff;
 }
 .tab-icon{font-size:16px;}
+.rail-owner{display:flex;flex-direction:column;gap:7px;margin-top:auto;padding:14px 8px 2px;border-top:1px solid rgba(237,232,222,.18);font-size:12px;}
+.rail-owner select{width:100%;min-width:0;min-height:40px;}
 
 /* --- Stage / panels --- */
 .stage{flex:1;padding:32px 40px;max-width:1100px;}
@@ -117,8 +119,9 @@ input[type=file]{font-size:13px;}
 .color-row{display:flex;gap:8px;}
 .color-row input[type=color]{width:44px;padding:2px;flex-shrink:0;}
 .color-row select{flex:1;}
-.fabric-row{display:flex;gap:8px;}
-.fabric-row input{flex:1;}
+.fabric-row{display:flex;gap:8px;min-width:0;}
+.fabric-row input,.fabric-row select{flex:1 1 0;width:0;min-width:0;}
+.fabric-row button{flex:0 0 auto;}
 .hint{font-size:12px;color:var(--sage);min-height:16px;}
 
 .chip-group{display:flex;flex-wrap:wrap;gap:6px;}
@@ -215,7 +218,9 @@ input[type=file]{font-size:13px;}
 .item-edit:hover{background:#E7F1E6;}
 .item-actions .item-remove{margin:0;padding:6px 4px;}
 
-.field-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.field-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.field-pair>.field{min-width:0;}
+.field-pair input{width:100%;min-width:0;}
 .hint-note{color:var(--ink-soft);font-style:italic;line-height:1.4;}
 .eco-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
 .eco-badge{
@@ -263,6 +268,8 @@ input[type=file]{font-size:13px;}
 .match-thumb{
   width:44px;height:44px;border-radius:4px;background-size:cover;background-position:center;background-color:#e2ddce;flex-shrink:0;
 }
+.match-palette{display:flex;gap:5px;margin-top:7px;}
+.match-palette-swatch{width:18px;height:18px;flex:0 0 18px;border:1px solid rgba(38,50,61,.2);border-radius:50%;}
 
 /* --- Outfit "full build" modal --- */
 .modal-backdrop{
@@ -373,6 +380,11 @@ h1,h2,h3{font-family:"DM Sans","Noto Sans Thai",sans-serif;}
 .panel-head h1{font-size:32px;font-weight:600;}
 .sub{color:#66766A;font-size:15px;line-height:1.7;margin-top:8px;}
 .closet-layout{grid-template-columns:minmax(310px,360px) minmax(0,1fr);gap:30px;}
+.closet-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:12px;align-items:end;margin:0 0 22px;padding:16px;background:#fff;border:1px solid #E0E9DD;border-radius:8px;}
+.closet-filter{display:flex;min-width:0;flex-direction:column;gap:6px;font-size:13px;color:#526457;}
+.closet-filter span{font-weight:600;}
+.closet-filter select{width:100%;min-width:0;}
+.closet-filters .btn-ghost{padding:0 12px;}
 .swatch-card,.item-card,.match-pair,.donate-card{
   background:#fff;
   border:1px solid #E0E9DD;
@@ -523,15 +535,21 @@ input[type=file]{font-size:14px;max-width:100%;}
   .rail{
     width:100%;
     flex-direction:row;
+    flex-wrap:wrap;
     justify-content:space-around;
     padding:8px env(safe-area-inset-left,0px) calc(8px + env(safe-area-inset-bottom,0px)) env(safe-area-inset-right,0px);
     order:2;
     position:sticky;bottom:0;
   }
+  .rail-owner{order:-1;flex:1 0 100%;flex-direction:row;align-items:center;margin:0;padding:0 8px 6px;border:0;}
+  .rail-owner label{flex:0 0 auto;}
+  .rail-owner select{width:auto;flex:1;}
   .rail-brand{display:none;}
   .rail-tab{flex-direction:column;font-size:12px;gap:4px;padding:7px 10px;}
   .stage{order:1;padding:24px 18px 10px;}
   .panel-head h1{font-size:27px;}
+  .closet-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:12px;}
+  .closet-filters .btn-ghost{min-height:44px;}
   .closet-layout{grid-template-columns:1fr;gap:22px;}
   .closet-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;}
   .outfit-board{grid-template-columns:minmax(75px,.7fr) minmax(120px,1.2fr) minmax(75px,.7fr);grid-template-rows:repeat(2,minmax(145px,1fr));gap:7px;padding:9px;min-height:310px;}

@@ -55,6 +55,49 @@ const MOCK_DPP_REGISTRY = {
     recycledContent: 0,
     type: "bottom",
     image: "assets/clothes/jeans.jpg"
+  },
+  "DPP-DEMO-COAT-RECYCLED": {
+    name: "เสื้อโค้ตรีไซเคิล (ตัวอย่าง)",
+    brand: "Wardrobe Demo · ข้อมูลสาธิต",
+    composition: [{ material: "โพลีเอสเตอร์รีไซเคิล (Recycled Polyester)", percent: 100 }],
+    color: "#75856A",
+    colorBucket: "cool",
+    care: "ซักน้ำเย็น แนะนำให้ซ่อมก่อนเปลี่ยนใหม่",
+    carbonFootprintKg: 15.2,
+    recycledContent: 100,
+    type: "outer",
+    image: "assets/clothes/coat.jpg",
+    palette: ["#75856A", "#D8D2C2", "#465549"],
+    image: "assets/clothes/coat2.jpg"
+  },
+  "DPP-DEMO-CREAM-LINEN": {
+    name: "เสื้อครีมลินิน (ตัวอย่าง)",
+    brand: "Wardrobe Demo · ข้อมูลสาธิต",
+    composition: [{ material: "ลินิน (Linen)", percent: 100 }],
+    color: "#E8E1D3",
+    colorBucket: "neutral",
+    care: "ซักโปรแกรมถนอมผ้า ตากผึ่งลม",
+    carbonFootprintKg: 6.3,
+    recycledContent: 0,
+    type: "top",
+    image: "assets/clothes/cream.jpg",
+    palette: ["#E8E1D3", "#C8BCA8", "#F5F1E8"],
+    image: "assets/clothes/cream-linen.jpg"
+  },
+  "DPP-DEMO-JEANS-RECYCLED": {
+    name: "กางเกงยีนส์ผ้าฝ้ายรีไซเคิล (ตัวอย่าง)",
+    brand: "Wardrobe Demo · ข้อมูลสาธิต",
+    composition: [{ material: "ผ้าฝ้ายรีไซเคิล (Recycled Cotton)", percent: 80 },
+                  { material: "โพลีเอสเตอร์รีไซเคิล (Recycled Polyester)", percent: 18 },
+                  { material: "อีลาสเทน (Elastane)", percent: 2 }],
+    color: "#3B4A63",
+    colorBucket: "cool",
+    care: "ซักกลับด้าน น้ำเย็น ตากผึ่งลม",
+    carbonFootprintKg: 12.4,
+    recycledContent: 98,
+    type: "bottom",
+    image: "assets/clothes/jeans2.jpg",
+    palette: ["#3B4A63", "#8292A5", "#222D3D"]
   }
 };
 
