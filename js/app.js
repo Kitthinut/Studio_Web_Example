@@ -806,7 +806,7 @@ function renderMatches() {
   const scored = items
     .filter(i => i.id !== base.id && typesPair(base.type, i.type))
     .map(candidate => {
-      const outfit = [base, candidate];
+      const outfit = buildFullOutfit(base, candidate);
       const paletteMatch = getBestMatchingPalette(outfit);
       const totalScore = getTotalMatchScore(outfit, paletteMatch.score);
 
