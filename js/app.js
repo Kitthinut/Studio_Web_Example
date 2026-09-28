@@ -708,19 +708,35 @@ function pairHarmonyScore(firstColor, secondColor) {
 }
 
 function getBestMatchingPalette(outfitItems) {
-  const colors = [...new Set(outfitItems.flatMap(itemPaletteColors))];
-  const pairScores = [];
-  for (let first = 0; first < colors.length; first++) {
-    for (let second = first + 1; second < colors.length; second++) {
-      pairScores.push(pairHarmonyScore(colors[first], colors[second]));
+  const itemColors = outfitItems.map(itemPaletteColors);
+  let bestColors = [];
+  let bestScore = -1;
+
+  function chooseColors(itemIndex, chosenColors) {
+    if (itemIndex === itemColors.length) {
+      const pairScores = [];
+      for (let first = 0; first < chosenColors.length; first++) {
+        for (let second = first + 1; second < chosenColors.length; second++) {
+          pairScores.push(pairHarmonyScore(chosenColors[first], chosenColors[second]));
+        }
+      }
+      const score = pairScores.length
+        ? pairScores.reduce((sum, value) => sum + value, 0) / pairScores.length
+        : 100;
+      if (score > bestScore) {
+        bestScore = score;
+        bestColors = [...new Set(chosenColors)];
+      }
+      return;
     }
+
+    itemColors[itemIndex].forEach(color => chooseColors(itemIndex + 1, [...chosenColors, color]));
   }
-  const score = pairScores.length
-    ? Math.round(pairScores.reduce((sum, value) => sum + value, 0) / pairScores.length)
-    : 100;
+
+  chooseColors(0, []);
   return {
-    palette: { name: "พาเลตจากสีเสื้อผ้าในชุด", colors },
-    score
+    palette: { name: "พาเลตที่เข้ากับชุดที่สุด", colors: bestColors },
+    score: Math.round(Math.max(0, bestScore))
   };
 }
 
@@ -737,8 +753,24 @@ function typesPair(a, b) {
 }
 
 function seasonOverlap(a, b) {
-  if (!a.length || !b.length) return 1;
   return a.some(s => b.includes(s)) ? 1 : 0;
+}
+
+function getTotalMatchScore(outfit, paletteScore) {
+  const seasonScores = [];
+  for (let first = 0; first < outfit.length; first++) {
+    for (let second = first + 1; second < outfit.length; second++) {
+      const firstSeasons = outfit[first].seasons || [];
+      const secondSeasons = outfit[second].seasons || [];
+      if (firstSeasons.length && secondSeasons.length) {
+        seasonScores.push(seasonOverlap(firstSeasons, secondSeasons) * 100);
+      }
+    }
+  }
+
+  if (!seasonScores.length) return paletteScore;
+  const averageSeasonScore = seasonScores.reduce((sum, score) => sum + score, 0) / seasonScores.length;
+  return Math.round(paletteScore * 0.9 + averageSeasonScore * 0.1);
 }
 
 function renderMatchSelect() {
@@ -772,7 +804,7 @@ function renderMatches() {
     .map(candidate => {
       const outfit = [base, candidate];
       const paletteMatch = getBestMatchingPalette(outfit);
-      const totalScore = Math.min(100, paletteMatch.score + (seasonOverlap(base.seasons, candidate.seasons) * 10));
+      const totalScore = getTotalMatchScore(outfit, paletteMatch.score);
 
       return {
         item: candidate,
@@ -850,6 +882,7 @@ function openOutfitModal(baseItem, chosenMatch) {
   const impact = document.getElementById("outfit-impact");
 
   const bestMatch = getBestMatchingPalette(outfit);
+  const totalScore = getTotalMatchScore(outfit, bestMatch.score);
 
   document.getElementById("outfit-modal-title").textContent = `ลุค: ${outfit.map(i => i.name).join(" + ")} (เข้ากับพาเลต: ${bestMatch.palette.name})`;
 
@@ -871,7 +904,7 @@ function openOutfitModal(baseItem, chosenMatch) {
 
   const totalCarbon = outfit.reduce((s, i) => s + (i.carbonFootprintKg || 0), 0);
   const avgRecycled = Math.round(outfit.reduce((s, i) => s + (i.recycledContent || 0), 0) / outfit.length);
-  impact.innerHTML = `🎨 คะแนนความเข้ากันของพาเลตสี: <strong>${bestMatch.score}%</strong> (${bestMatch.palette.name})<br>
+  impact.innerHTML = `🎨 คะแนนความเข้ากันของชุด: <strong>${totalScore}%</strong> (${bestMatch.palette.name})<br>
     🌍 คาร์บอนฟุตพรินท์รวม ≈ <strong>${totalCarbon.toFixed(1)} กก. CO2e</strong>
     &nbsp;·&nbsp; ♻️ เนื้อผ้ารีไซเคิลเฉลี่ย <strong>${avgRecycled}%</strong>`;
 
