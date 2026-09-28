@@ -4,7 +4,64 @@
 const STORAGE_KEY = "wardrobe_items_v1";
 const OWNER_STORAGE_KEY = "wardrobe_active_owner_v1";
 const OWNER_PROFILES_STORAGE_KEY = "wardrobe_owner_profiles_v1";
+const LANGUAGE_STORAGE_KEY = "wardrobe_language_v1";
 const OWNER_IDS = ["A", "B", "C", "D"];
+const UI_TRANSLATIONS = {
+  "ตู้เสื้อผ้า": "Wardrobe", "จับคู่ชุด": "Outfit matching", "จุดบริจาค": "Donation points",
+  "ข้อมูลเพิ่มเติม": "More information", "โปรไฟล์เจ้าของที่กำลังเพิ่ม": "Profile for new items",
+  "แก้ชื่อโปรไฟล์": "Edit profile name", "ชื่อโปรไฟล์": "Profile name", "บันทึกชื่อ": "Save name",
+  "บันทึกชื่อโปรไฟล์แล้ว": "Profile name saved", "บันทึกชื่อไม่สำเร็จ": "Could not save profile name",
+  "กรุณาระบุชื่อโปรไฟล์": "Please enter a profile name", "ตู้เสื้อผ้าของฉัน": "My wardrobe",
+  "บันทึกชนิดผ้าจากป้าย — พิมพ์เองหรือสแกนป้ายด้วยกล้อง": "Record fabric from the label, or scan it with your camera",
+  "โทนสี": "Color tone", "ทุกโทนสี": "All color tones", "โทนเย็น": "Cool", "โทนอุ่น": "Warm",
+  "แบรนด์": "Brand", "ทุกแบรนด์": "All brands", "เจ้าของ": "Owner", "ทุกคน": "Everyone",
+  "ประเภท": "Type", "ทุกประเภท": "All types", "เสื้อ": "Top", "กางเกง/กระโปรง": "Bottoms",
+  "ชุดเดรส": "Dress", "เสื้อคลุม": "Outerwear", "เครื่องประดับ": "Accessories", "รองเท้า": "Shoes",
+  "ล้างตัวกรอง": "Clear filters", "เพิ่มชิ้นใหม่": "Add an item", "ชื่อชิ้น": "Item name",
+  "แบรนด์ / แหล่งผลิต (ถ้ามี)": "Brand / origin (optional)", "รูปภาพ (ถ้ามี)": "Photo (optional)",
+  "สีหลัก": "Main color", "ชนิดผ้า": "Fabric", "ทุกชนิดผ้า": "All fabrics",
+  "ชนิดผ้า (จากป้าย)": "Fabric (from label)", "สแกนป้าย": "Scan label",
+  "Digital Product Passport (DPP)": "Digital Product Passport (DPP)", "สแกน QR ของ DPP": "Scan DPP QR code",
+  "ฤดู/โอกาส": "Season / occasion", "ร้อน": "Hot", "ฝน": "Rainy", "เย็น": "Cool",
+  "ทางการ": "Formal", "บันทึกลงตู้เสื้อผ้า": "Save to wardrobe", "ยกเลิก": "Cancel",
+  "บันทึกการแก้ไข": "Save changes", "แก้ไข": "Edit", "ลบ": "Delete", "ไม่ระบุ": "Unspecified",
+  "กรองตามชนิดผ้า": "Filter by fabric", "ผ้าทุกชนิด": "All fabrics", "เสื้อผ้าที่มีชนิดผ้านี้": "Items containing this fabric",
+  "เจ้าของ:": "Owner:",
+  "บันทึกการเลือกโปรไฟล์แล้ว": "Selected profile saved",
+  "ไม่พบเสื้อผ้าที่ตรงกับตัวกรอง": "No items match these filters", "ตู้เสื้อผ้ายังว่างอยู่ — เพิ่มชิ้นแรกของคุณทางซ้าย": "Your wardrobe is empty. Add your first item on the left"
+};
+let currentLanguage = "th";
+try {
+  currentLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY) === "en" ? "en" : "th";
+} catch (e) {
+  console.error("Could not read language preference:", e);
+}
+
+function applyLanguage() {
+  const english = currentLanguage === "en";
+  const translations = english
+    ? UI_TRANSLATIONS
+    : Object.fromEntries(Object.entries(UI_TRANSLATIONS).map(([thai, englishText]) => [englishText, thai]));
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let node;
+  while ((node = walker.nextNode())) {
+    const trimmed = node.nodeValue.trim();
+    if (translations[trimmed]) node.nodeValue = node.nodeValue.replace(trimmed, translations[trimmed]);
+  }
+  document.querySelectorAll("[placeholder], [aria-label], [title]").forEach(element => {
+    ["placeholder", "aria-label", "title"].forEach(attribute => {
+      const value = element.getAttribute(attribute);
+      if (translations[value]) element.setAttribute(attribute, translations[value]);
+    });
+  });
+  document.documentElement.lang = currentLanguage;
+  document.title = english ? "Wardrobe — Re-Wear" : "ตู้เสื้อผ้า — Wardrobe";
+  const toggle = document.getElementById("language-toggle");
+  if (toggle) {
+    toggle.textContent = english ? "ภาษาไทย" : "English";
+    toggle.setAttribute("aria-label", english ? "Switch language to Thai" : "เปลี่ยนภาษาเป็นภาษาอังกฤษ");
+  }
+}
 
 function loadOwnerProfiles() {
   try {
@@ -87,12 +144,14 @@ renderOwnerProfiles();
 activeOwnerSelect.addEventListener("change", () => {
   activeOwner = activeOwnerSelect.value;
   ownerNameInput.value = ownerProfiles[activeOwner];
-  ownerProfileStatus.textContent = "";
+  ownerProfileStatus.textContent = "บันทึกการเลือกโปรไฟล์แล้ว";
   try {
     localStorage.setItem(OWNER_STORAGE_KEY, activeOwner);
   } catch (e) {
     console.error("Could not save active wardrobe owner:", e);
+    ownerProfileStatus.textContent = "บันทึกชื่อไม่สำเร็จ";
   }
+  applyLanguage();
 });
 
 document.getElementById("save-owner-name").addEventListener("click", () => {
@@ -101,16 +160,29 @@ document.getElementById("save-owner-name").addEventListener("click", () => {
     ownerProfileStatus.textContent = "กรุณาระบุชื่อโปรไฟล์";
     return;
   }
-  ownerProfiles[activeOwner] = name;
   try {
-    localStorage.setItem(OWNER_PROFILES_STORAGE_KEY, JSON.stringify(ownerProfiles));
+    const updatedProfiles = { ...ownerProfiles, [activeOwner]: name };
+    localStorage.setItem(OWNER_PROFILES_STORAGE_KEY, JSON.stringify(updatedProfiles));
+    ownerProfiles[activeOwner] = name;
     renderOwnerProfiles();
     renderCloset();
     ownerProfileStatus.textContent = "บันทึกชื่อโปรไฟล์แล้ว";
+    applyLanguage();
   } catch (e) {
     console.error("Could not save owner profiles:", e);
     ownerProfileStatus.textContent = "บันทึกชื่อไม่สำเร็จ";
+    applyLanguage();
   }
+});
+
+document.getElementById("language-toggle").addEventListener("click", () => {
+  currentLanguage = currentLanguage === "th" ? "en" : "th";
+  try {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, currentLanguage);
+  } catch (e) {
+    console.error("Could not save language preference:", e);
+  }
+  applyLanguage();
 });
 
 // ============================================================
@@ -334,7 +406,9 @@ dppDemoSelect.addEventListener("change", () => {
   const rec = MOCK_DPP_REGISTRY[dppDemoSelect.value];
   if (!rec) return;
   applyDPPRecord(rec);
-  dppStatus.textContent = `ดึงข้อมูลจาก DPP ตัวอย่าง "${rec.name}" เรียบร้อย — ตรวจสอบก่อนบันทึก`;
+  dppStatus.textContent = dppDemoSelect.value.endsWith("-EN")
+    ? `Loaded sample DPP "${rec.name}". Review the details before saving.`
+    : `ดึงข้อมูลจาก DPP ตัวอย่าง "${rec.name}" เรียบร้อย — ตรวจสอบก่อนบันทึก`;
 });
 
 dppScanBtn.addEventListener("click", () => dppScanInput.click());
@@ -520,21 +594,26 @@ function renderCloset() {
   const ownerFilter = document.getElementById("filter-owner");
   updateFilterOptions(brandFilter, items.map(item => item.brand), "ทุกแบรนด์");
   updateOwnerFilterOptions(ownerFilter, items.map(item => item.owner));
+  updateFabricFilterOptions();
   grid.innerHTML = "";
   if (!items.length) {
     grid.innerHTML = `<div class="empty-note">ตู้เสื้อผ้ายังว่างอยู่ — เพิ่มชิ้นแรกของคุณทางซ้าย</div>`;
+    applyLanguage();
     return;
   }
   const colorFilter = document.getElementById("filter-color").value;
   const typeFilter = document.getElementById("filter-type").value;
+  const fabricFilter = document.getElementById("filter-fabric").value;
   const visibleItems = items.filter(item =>
     (!colorFilter || item.colorBucket === colorFilter) &&
     (!brandFilter.value || item.brand === brandFilter.value) &&
     (!ownerFilter.value || (item.owner || "__unassigned__") === ownerFilter.value) &&
-    (!typeFilter || item.type === typeFilter)
+    (!typeFilter || item.type === typeFilter) &&
+    (!fabricFilter || itemFabricText(item).toLowerCase().includes(fabricFilter.toLowerCase()))
   );
   if (!visibleItems.length) {
     grid.innerHTML = `<div class="empty-note">ไม่พบเสื้อผ้าที่ตรงกับตัวกรอง</div>`;
+    applyLanguage();
     return;
   }
   visibleItems.forEach(item => {
@@ -581,6 +660,33 @@ function renderCloset() {
       renderCloset();
     });
   });
+  applyLanguage();
+}
+
+function itemFabricText(item) {
+  const composition = Array.isArray(item.composition)
+    ? item.composition.map(part => part.material).filter(Boolean).join(" + ")
+    : "";
+  return [item.fabric, composition].filter(Boolean).join(" + ");
+}
+
+function updateFabricFilterOptions() {
+  const select = document.getElementById("filter-fabric");
+  const selectedValue = select.value;
+  const materialOptions = new Map();
+  items.forEach(item => {
+    const fabricText = itemFabricText(item);
+    FABRIC_KEYWORDS.forEach(fabric => {
+      if (fabric.match.test(fabricText)) materialOptions.set(fabric.label.toLowerCase(), fabric.label);
+    });
+    fabricText.split(/[+,;|]/).map(part => part.replace(/\b\d+(?:\.\d+)?\s*%?/g, "").trim())
+      .filter(part => part.length > 1 && !FABRIC_KEYWORDS.some(fabric => fabric.label === part))
+      .forEach(part => materialOptions.set(part.toLowerCase(), part));
+  });
+  const sortedMaterials = [...materialOptions.values()].sort((a, b) => a.localeCompare(b));
+  select.replaceChildren(new Option("ทุกชนิดผ้า", ""));
+  sortedMaterials.forEach(material => select.add(new Option(material, material)));
+  select.value = sortedMaterials.includes(selectedValue) ? selectedValue : "";
 }
 
 function updateOwnerFilterOptions(select, values) {
@@ -604,10 +710,10 @@ function updateFilterOptions(select, values, allLabel) {
   select.value = options.includes(currentValue) ? currentValue : "";
 }
 
-document.querySelectorAll("#filter-color, #filter-brand, #filter-owner, #filter-type")
+document.querySelectorAll("#filter-color, #filter-brand, #filter-owner, #filter-type, #filter-fabric")
   .forEach(select => select.addEventListener("change", renderCloset));
 document.getElementById("clear-filters").addEventListener("click", () => {
-  document.querySelectorAll("#filter-color, #filter-brand, #filter-owner, #filter-type")
+  document.querySelectorAll("#filter-color, #filter-brand, #filter-owner, #filter-type, #filter-fabric")
     .forEach(select => { select.value = ""; });
   renderCloset();
 });
@@ -1087,3 +1193,4 @@ function renderDonateResults(points) {
 // INIT
 // ============================================================
 renderCloset();
+applyLanguage();

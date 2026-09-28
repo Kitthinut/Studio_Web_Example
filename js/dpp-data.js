@@ -98,6 +98,85 @@ const MOCK_DPP_REGISTRY = {
     type: "bottom",
     image: "assets/clothes/jeans2.jpg",
     palette: ["#3B4A63", "#8292A5", "#222D3D"]
+  },
+  "DPP-DEMO-COAT-EN": {
+    name: "Cream and Green Wool Coat (English demo)",
+    brand: "Wardrobe Demo · English sample",
+    composition: [{ material: "Wool", percent: 60 },
+                  { material: "Polyester", percent: 40 }],
+    color: "#d3ffd6",
+    colorBucket: "warm",
+    care: "Demo care information — check the garment's actual label",
+    carbonFootprintKg: 20.0,
+    recycledContent: 0,
+    type: "outer",
+    image: "assets/clothes/coat.jpg"
+  },
+  "DPP-DEMO-CREAM-EN": {
+    name: "Cream Cotton T-Shirt (English demo)",
+    brand: "Wardrobe Demo · English sample",
+    composition: [{ material: "Cotton", percent: 100 }],
+    color: "#E8E1D3",
+    colorBucket: "neutral",
+    care: "Demo care information — check the garment's actual label",
+    carbonFootprintKg: 9.1,
+    recycledContent: 0,
+    type: "top",
+    image: "assets/clothes/cream.jpg"
+  },
+  "DPP-DEMO-JEANS-EN": {
+    name: "Denim Jeans (English demo)",
+    brand: "Wardrobe Demo · English sample",
+    composition: [{ material: "Cotton", percent: 98 },
+                  { material: "Elastane", percent: 2 }],
+    color: "#3B4A63",
+    colorBucket: "cool",
+    care: "Demo care information — check the garment's actual label",
+    carbonFootprintKg: 18.5,
+    recycledContent: 0,
+    type: "bottom",
+    image: "assets/clothes/jeans.jpg"
+  },
+  "DPP-DEMO-COAT-RECYCLED-EN": {
+    name: "Recycled Polyester Coat (English demo)",
+    brand: "Wardrobe Demo · English sample",
+    composition: [{ material: "Recycled Polyester", percent: 100 }],
+    color: "#75856A",
+    colorBucket: "cool",
+    care: "Wash cold; repair before replacing when possible",
+    carbonFootprintKg: 15.2,
+    recycledContent: 100,
+    type: "outer",
+    image: "assets/clothes/coat2.jpg",
+    palette: ["#75856A", "#D8D2C2", "#465549"]
+  },
+  "DPP-DEMO-CREAM-LINEN-EN": {
+    name: "Cream Linen Shirt (English demo)",
+    brand: "Wardrobe Demo · English sample",
+    composition: [{ material: "Linen", percent: 100 }],
+    color: "#E8E1D3",
+    colorBucket: "neutral",
+    care: "Use a gentle wash cycle and air-dry",
+    carbonFootprintKg: 6.3,
+    recycledContent: 0,
+    type: "top",
+    image: "assets/clothes/cream-linen.jpg",
+    palette: ["#E8E1D3", "#C8BCA8", "#F5F1E8"]
+  },
+  "DPP-DEMO-JEANS-RECYCLED-EN": {
+    name: "Recycled Cotton Jeans (English demo)",
+    brand: "Wardrobe Demo · English sample",
+    composition: [{ material: "Recycled Cotton", percent: 80 },
+                  { material: "Recycled Polyester", percent: 18 },
+                  { material: "Elastane", percent: 2 }],
+    color: "#3B4A63",
+    colorBucket: "cool",
+    care: "Turn inside out, wash cold, and air-dry",
+    carbonFootprintKg: 12.4,
+    recycledContent: 98,
+    type: "bottom",
+    image: "assets/clothes/jeans2.jpg",
+    palette: ["#3B4A63", "#8292A5", "#222D3D"]
   }
 };
 

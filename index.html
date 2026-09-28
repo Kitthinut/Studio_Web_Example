@@ -22,18 +22,20 @@
       <img class="brand-mark" src="assets/clothes/Re-Wear.png" alt="Re-Wear">
       <span class="brand-word">ตู้เสื้อผ้า</span>
     </div>
-    <button class="rail-tab is-active" data-tab="closet">
-      <span class="tab-icon">👕</span><span>ตู้เสื้อผ้า</span>
-    </button>
-    <button class="rail-tab" data-tab="match">
-      <span class="tab-icon">✨</span><span>จับคู่ชุด</span>
-    </button>
-    <button class="rail-tab" data-tab="donate">
-      <span class="tab-icon">📍</span><span>จุดบริจาค</span>
-    </button>
-    <button class="rail-tab" data-tab="guide">
-      <span class="tab-icon">♻️</span><span>ข้อมูลเพิ่มเติม</span>
-    </button>
+    <div class="rail-tabs">
+      <button class="rail-tab is-active" data-tab="closet">
+        <span class="tab-icon">👕</span><span>ตู้เสื้อผ้า</span>
+      </button>
+      <button class="rail-tab" data-tab="match">
+        <span class="tab-icon">✨</span><span>จับคู่ชุด</span>
+      </button>
+      <button class="rail-tab" data-tab="donate">
+        <span class="tab-icon">📍</span><span>จุดบริจาค</span>
+      </button>
+      <button class="rail-tab" data-tab="guide">
+        <span class="tab-icon">♻️</span><span>ข้อมูลเพิ่มเติม</span>
+      </button>
+    </div>
     <div class="rail-owner">
       <label for="active-owner">โปรไฟล์เจ้าของที่กำลังเพิ่ม</label>
       <select id="active-owner" aria-label="เลือกเจ้าของเสื้อผ้าที่จะเพิ่ม">
@@ -47,6 +49,7 @@
         <button type="button" id="save-owner-name" class="btn-ghost">บันทึกชื่อ</button>
       </div>
       <p id="owner-profile-status" class="owner-profile-status" aria-live="polite"></p>
+      <button type="button" id="language-toggle" class="btn-ghost" aria-label="เปลี่ยนภาษาเป็นภาษาอังกฤษ">English</button>
     </div>
   </nav>
 
@@ -89,6 +92,10 @@
             <option value="accessory">เครื่องประดับ</option>
             <option value="shoes">รองเท้า</option>
           </select>
+        </label>
+        <label class="closet-filter">
+          <span>ชนิดผ้า</span>
+          <select id="filter-fabric"><option value="">ทุกชนิดผ้า</option></select>
         </label>
         <button type="button" id="clear-filters" class="btn-ghost">ล้างตัวกรอง</button>
       </div>
