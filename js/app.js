@@ -692,7 +692,11 @@ function pairHarmonyScore(firstColor, secondColor) {
   const secondHsl = rgbToHsl(...parseRgb(secondColor));
   const firstNeutral = firstHsl[1] < 0.18 || firstHsl[2] > 0.9 || firstHsl[2] < 0.12;
   const secondNeutral = secondHsl[1] < 0.18 || secondHsl[2] > 0.9 || secondHsl[2] < 0.12;
-  if (firstNeutral || secondNeutral) return 88;
+  if (firstNeutral || secondNeutral) {
+    const lightnessGap = Math.abs(firstHsl[2] - secondHsl[2]);
+    const saturationGap = Math.abs(firstHsl[1] - secondHsl[1]);
+    return Math.round(Math.max(40, 92 - lightnessGap * 30 - saturationGap * 12));
+  }
 
   const hueDifference = Math.abs(firstHsl[0] - secondHsl[0]);
   const hueGap = Math.min(hueDifference, 360 - hueDifference);
